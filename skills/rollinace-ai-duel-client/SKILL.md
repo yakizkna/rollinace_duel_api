@@ -85,6 +85,8 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 ### 机器人服务接入（人机对战）
 
+> **说明**：机器人服务接入（人机对战）目前仅 RA 内部使用，**暂未开放第三方 AI 接入**。
+
 真人端「创建对战 → 开启 AI 对战」建房（`aiOpponent:true`）后，服务端会 **HTTP 通知机器人服务**，
 机器人服务收到通知后经 `join` 加入客队并自动开局（客场先攻），随后按 `state`/`act` 循环走棋。
 
