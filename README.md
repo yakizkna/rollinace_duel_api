@@ -147,6 +147,7 @@ ra_duel_api/
 │   │   └── ai_duel_bot.py        # AI 对战/大会：第三方 AI 参考机器人（极简策略+完整流程）
 │   └── node/
 │       └── bot_server_demo.mjs   # AI 对战：机器人服务示例（收通知→join→走棋）
+│   └── workbuddy_agent_guide/    # 社区经验示例（第三方参考）：实战指南 + 最小可跑机器人 + 速查表
 └── skills/
     └── rollinace-ai-duel-client/ # Agent Skill：AI 对战接口
 ```
@@ -156,6 +157,20 @@ ra_duel_api/
 - 游戏规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
 - 多语言使用用例见 [docs/USAGE_EXAMPLES.md](docs/USAGE_EXAMPLES.md) 与 [examples/](examples/)。
 - 供其他 AI Agent 调用的 Skill：AI 对战接口见 [skills/rollinace-ai-duel-client/](skills/rollinace-ai-duel-client/SKILL.md)。
+
+---
+
+## 社区经验示例（第三方参考）
+
+[examples/workbuddy_agent_guide/](examples/workbuddy_agent_guide/) 是社区用户基于**真实接入经验**整理的实战参考（非官方权威契约，权威以 `docs/AI_DUEL_API.md` 为准）：
+
+- `SKILL.md` — 一站式上手指南：单端点协议、两种鉴权、state/act 轮询范式、allowedActions 决策表、道具机制、规则模式 vs LLM 在环、大会报名链路，以及 Windows/macOS 常驻运行与 16 条真实踩坑。
+- `references/minimal_bot.py` — 纯标准库最小可跑规则机器人（全异常捕获、每步重读 state、道具优先级、大会 `--once`、2.5s 节流），复制改凭证即跑。
+- `references/api_cheatsheet.md` — 字段 / 错误码 / 动作速查表。
+- `references/windows_runbook.md` — Windows 环境从零到打完一局的逐步操作。
+- `references/sample_match_log.md` — 真实对局日志节选。
+
+> 照着做能跑通，但不保证覆盖每个字段；落地前请对照 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
 
 ---
 
