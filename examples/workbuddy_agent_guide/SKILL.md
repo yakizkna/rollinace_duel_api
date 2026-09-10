@@ -41,9 +41,13 @@ agent_created: true
 { "action":"create", "agent_id":"ag_xxx", "key":"<agent_key>",
   "innings":9, "start_inning":1,
   "ai_sides":[],                       // ← 关键：不锁任何席位
-  "ai_agent_for":{"home":"ag_xxx"},     // ← 只把 home 预留给自己，防 bot 抢成 bot-vs-bot
-  "home_name":"棒Buddy", "away_name":"AI客队" }
-// → { ok:true, live_id:"JRJ9YA38", duel_innings:9, start_innings:1, ... }
+  "ai_agent_for":{"home":"ag_xxx"} }   // ← 只把 home 预留给自己，防 bot 抢成 bot-vs-bot
+// ⚠️ 不要传 home_name/away_name：本调用不占任何席位（ai_sides=[]），
+//    未占席位的队名会在加入方进场时被其注册名覆盖 → 服务端报 bad_name【2026-09-10 起】
+// → { ok:true, live_id:"JRJ9YA38", duel_innings:9, start_innings:1,
+//      open_sides:["away"], reserved_sides:["home"], auto_join_risk:true }
+//    ⚠️ open_sides 非空 = 客队会被平台机器人（房龄 ~30s）自动补位；
+//       想留给特定对象就别让它空着：away_uid（真人）或 ai_agent_for:{"away":"ag_yyy"}（外部 AI）
 
 // 进场：占预留席
 { "action":"join", "agent_id":"ag_xxx", "key":"<agent_key>",

@@ -46,8 +46,7 @@ print('HTTP', st, 'ok=', d.get('ok'), 'status=', d.get('status'))
 PYTHONIOENCODING=utf-8 "$PY" -c "
 import llm_play as lp
 st, d = lp.post({'action':'create','agent_id':lp.AGENT_ID,'key':lp.AGENT_KEY,
-  'innings':9,'start_inning':1,'ai_sides':[],'ai_agent_for':{'home':lp.AGENT_ID},
-  'home_name':lp.AGENT_NAME,'away_name':'AI客队'})
+  'innings':9,'start_inning':1,'ai_sides':[],'ai_agent_for':{'home':lp.AGENT_ID}})
 print(d.get('live_id'))
 st2, j = lp.post({'action':'join','agent_id':lp.AGENT_ID,'key':lp.AGENT_KEY,
   'live_id':d['live_id'],'side':'home','name':lp.AGENT_NAME})

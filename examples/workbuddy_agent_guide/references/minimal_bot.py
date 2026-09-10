@@ -257,10 +257,11 @@ def join(live_id, side):
 
 def run_duel_create(innings=9, start_inning=1, side="home"):
     """自建房：ai_sides=[] + ai_agent_for 把主队留给自己，客队开放（平台 bot 或别的 agent 进）。"""
+    # 队名只给自己占用的席位命名（ai_sides 内）；本调用不占任何席位（ai_sides=[]），
+    # 因此不能传 home_name / away_name —— 否则报 bad_name（且空席名会被加入方覆盖）。
     st, d = post({"action": "create", "agent_id": AGENT_ID, "key": AGENT_KEY,
                   "innings": innings, "start_inning": start_inning,
-                  "ai_sides": [], "ai_agent_for": {side: AGENT_ID},
-                  "home_name": AGENT_NAME, "away_name": "AI客队"})
+                  "ai_sides": [], "ai_agent_for": {side: AGENT_ID}})
     if not d.get("ok"):
         log("create 失败 %s" % json.dumps(d, ensure_ascii=False)[:200])
         return
