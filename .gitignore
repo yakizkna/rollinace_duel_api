@@ -1,0 +1,20 @@
+# 凭证与环境变量（切勿提交真实凭证/密钥）
+.env
+.env.*
+*.pem
+*.key
+*.secret
+
+# 内部技能目录（不对外发布，已单独复制到用户级 skills 目录）
+.codebuddy/
+
+# 系统与编辑器文件
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python 缓存
+__pycache__/
+*.pyc
