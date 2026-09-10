@@ -205,9 +205,9 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 
 ---
 
-### 0.7 玩家报名杯赛回调（event:"tour_signup"）
+### 0.7 玩家报名大会回调（event:"tour_signup"）
 
-真人玩家在官网「杯」（/tour）页面点击报名当前杯赛时，服务端**登记 uid 后**回调机器人平台
+真人玩家在官网「大会」（/tour）页面点击报名当前大会时，服务端**登记 uid 后**回调机器人平台
 （同一回调地址通道，5s 超时；通知失败**不阻断报名**）：
 
 ```json
@@ -223,7 +223,7 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 
 AI 平台收到后应自行决定如何给该玩家分配场次：
 - **pve / pvp**：调用 `create`（`type:"tour"`）新建场次并把 `playerUid` 预占到 home/away
-  （或填入已创建杯赛场次的空席）；分配完成后玩家会在对战大厅「我的对战」看到该房并进入；
+  （或填入已创建大会场次的空席）；分配完成后玩家会在对战大厅「我的对战」看到该房并进入；
 - **eve**：无需真人报名（全 AI），此回调不会触发。
 
 > 服务端只登记与通知，不负责配对/补位/晋级；赛程推进全部由 AI 平台执行（见 4.10）。
@@ -236,7 +236,7 @@ AI 平台收到后应自行决定如何给该玩家分配场次：
 
 | 阶段 | 说明 |
 |---|---|
-| 凭证 | `agent_id` 与 `key`（服务端只存哈希）。agent 角色：`agent`（普通，默认）/ `cup`（赛事管理：建大会·排阵·发奖·关超时房）/ `admin`（管理员，含 cup 全部能力，可调 `close` 关闭任意对战房间） |
+| 凭证 | `agent_id` 与 `key`（服务端只存哈希）。agent 角色：`agent`（普通，默认）/ `cup`（大会管理：建大会·排阵·发奖·关超时房）/ `admin`（管理员，含 cup 全部能力，可调 `close` 关闭任意对战房间） |
 | 换票 | `session` / `create` / `join` / `list` / `close` 接口带 `agentId` + `key`（两字段任选 body 或请求头）。凭证无效 / 已被停用 → 401 `unauthorized` |
 | 会话 | 换票成功后返回 `key`（session_key）。后续 `state` / `act` / `heartbeat` / `leave` 带该 key |
 | 绑定 | key 与 **房间（liveId）+ 阵营（side：home/away）** 绑定，天然隔离：跨房调用 → 403 `session_mismatch` |
@@ -330,10 +330,10 @@ roll1 ──掷骰──▶ [1B/?] ──▶ choose ──take1B──┐
 | `cupSignup` | agentId + key（普通 agent 即可） | **报名参加当前大会**（大会开启「允许第三方 AI 报名」时可用；与真人同池 8 席先到先得） |
 | `cupCancel` | agentId + key（普通 agent 即可） | 取消我的大会报名（幂等） |
 | `cupMySchedule` | agentId + key（普通 agent 即可） | 查询我的大会报名状态与场次（`status`：`open` / `external_disabled` / `cup_full` / `signup_closed` / `registered` / `scheduled` / `no_cup`） |
-| `close` | agentId + key（**`role:"admin"` 或 `role:"cup"`（限本平台房）**） | 关闭对战房间（按 `liveId`，无需 session_key；杯赛超时可用 `force:true`） |
-| `createCup` | agentId + key（**`role:"cup"`/`admin`**） | 创建全局杯赛（八强 8 席，open 可报名） |
-| `cupReport` | agentId + key（**`role:"cup"`/`admin`**） | 上报某场对阵/胜者到杯赛晋级表（幂等） |
-| `endCup` | agentId + key（**`role:"cup"`/`admin`**） | 结束杯赛（关闭报名，幂等） |
+| `close` | agentId + key（**`role:"admin"` 或 `role:"cup"`（限本平台房）**） | 关闭对战房间（按 `liveId`，无需 session_key；大会超时可用 `force:true`） |
+| `createCup` | agentId + key（**`role:"cup"`/`admin`**） | 创建全局大会（八强 8 席，open 可报名） |
+| `cupReport` | agentId + key（**`role:"cup"`/`admin`**） | 上报某场对阵/胜者到大会晋级表（幂等） |
+| `endCup` | agentId + key（**`role:"cup"`/`admin`**） | 结束大会（关闭报名，幂等） |
 | `reward` | agentId + key（**`role:"cup"`/`admin`**） | 赛后给真人胜者发放奖品技能包（增量、封顶、幂等） |
 | `cupSignupRemove` | agentId + key（**`role:"cup"`/`admin`**） | 从大会报名表移除某真人报名（`uid`）；幂等（不在表也 ok）；配合真人端「已报名」状态撤销与平台本地名单同步删除，避免被报名期远端同步重新加回 |
 
@@ -376,11 +376,11 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 | `startInning` | 否 | 开局位置，默认等于 `innings` |
 | `aiSides` | 否 | 由 AI 接管的席位数组，默认 `["home","away"]`（自对弈）；传 `["away"]` 表示主队留给真人；**显式传 `[]` 且不指定 uid = 空房**（无席位占用、waiting，等待 AI 或玩家加入） |
 | `aiAgentFor` | 否（`tour`/`duel` 均可；`tour` 需 `role:"cup"`/`admin`） | 为指定第三方 agent 预留席位：`{ "home"?: "ag_xxx", "away"?: "ag_xxx" }`。该侧席位留空、**不签发 key**，此后仅该 agent 可经 `join`/`session` 占用（`403 seat_reserved` 拦截他人）；duel 房用于「外部 AI vs 外部 AI」，tour 房用于大会为已报名第三方 AI 建场 |
-| `type` | 否 | 房间类型：`duel`-对战房（默认）/ `tour`-杯赛场次房（需 `role:"cup"`/`admin`）。两种类型共用对战引擎，tour 房可关联杯赛（`cupId`/`round`） |
+| `type` | 否 | 房间类型：`duel`-对战房（默认）/ `tour`-大会场次房（需 `role:"cup"`/`admin`）。两种类型共用对战引擎，tour 房可关联大会（`cupId`/`round`） |
 | `homeUid`/`awayUid` | 否 | 预占**真实玩家 uid** 到该席位（不发 key；与同席 `aiSides` 互斥）。预占的玩家登录后可在对战大厅「我的对战」看到并进入（waiting 等对手） |
-| `name` | 否 | 场次展示名（如「八强赛 A1」），杯赛编排标识用 |
+| `name` | 否 | 场次展示名（如「八强赛 A1」），大会编排标识用 |
 | `round` | 否 | 轮次元数据（如 `QF`/`SF`/`F` 或自定义，AI 平台编排用） |
-| `cupId` | 否 | 归属杯赛 id（`createCup` 返回），用于把场次关联到杯赛 |
+| `cupId` | 否 | 归属大会 id（`createCup` 返回），用于把场次关联到大会 |
 | `prize` | 否 | tour 房预设胜者奖品（技能包，如 `{ "bat": 2, "mist": 1 }`，仅对真人胜者有效；reward 未传 prize 时兜底用它） |
 | `aiUseBS` | 否 | 要求 AI 对手使用好坏球：`true` 时机器人只派 bs=on（开启好坏球）角色参赛（对齐真人建房 `aiUseBS`；`list` 与大厅据此透传） |
 | `stream` | 否 | **duel 房固定公开直播（`true` 不可关，即「AI 直播」）**；tour 大会房固定 `false`（不进大厅，走报名页晋级图入口）。外部 AI 建房无需传此参数 |
@@ -796,14 +796,14 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 ---
 
-## 4.10 杯赛（tour）：创建 / 上报对阵 / 结束 / 发奖
+## 4.10 RA大会（tour）：创建 / 上报对阵 / 结束 / 发奖
 
-> 杯赛是「全局同一时间一个」的八强淘汰赛（8 进 4 → 4 进 2 → 2 进 1），由 AI 平台经本组
-> `role:"cup"`（赛事管理）或 `role:"admin"` agent 管理。服务端只存杯赛状态与对阵表，**赛程推进
+> RA大会是「全局同一时间一个」的八强淘汰赛（8 进 4 → 4 进 2 → 2 进 1），由 AI 平台经本组
+> `role:"cup"`（大会管理）或 `role:"admin"` agent 管理。服务端只存大会状态与对阵表，**赛程推进
 > 由 AI 平台执行**：轮询每场 `matchStatus=ended` + `winner`，再按结果建下一轮房并上报晋级表，
 > 直至决出冠军后 `endCup`。
 
-### 4.10.1 创建杯赛 createCup
+### 4.10.1 创建大会 createCup
 
 ```bash
 curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" -d '{
@@ -813,13 +813,13 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 }'
 ```
 
-参数：`name`（杯名）、`mode`（`pvp`/`pve`/`eve`，默认 pvp）、`aiRoster`（AI 选手名单，
+参数：`name`（大会名）、`mode`（`pvp`/`pve`/`eve`，默认 pvp）、`aiRoster`（AI 选手名单，
 报名窗口后由平台用它们补满 8 席）、`prize`（冠军奖品技能包，如 `{bat:2,mist:1}`，仅对真人有效）。
 
 响应 `cup` 含：`cupId/name/mode/status(open)/aiRoster/signups/bracket/prize/ownerAgentId/createdAt`。
-已有未结束杯赛时返回 409 `cup_active`；仅 `cup`/`admin` 角色可调用。
+已有未结束大会时返回 409 `cup_active`；仅 `cup`/`admin` 角色可调用。
 
-**选手构成（推荐流程）**：`createCup` 后真人经官网「杯」页报名（自动登记到 `signups` 并回调
+**选手构成（推荐流程）**：`createCup` 后真人经官网「大会」页报名（自动登记到 `signups` 并回调
 机器人平台 `tour_signup`）；AI 平台等待一段时间（如 10 分钟）后，用 `aiRoster` 补满 8 席
 （真人不足 8 人时），随后按报名顺序建场：
 
@@ -836,9 +836,9 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 - `round`：`QF`（八强，0~3）/ `SF`（半决赛，0~1）/ `F`（决赛，0）；
 - 不传 `index` 时按 `liveId` 定位槽位（找不到则追加）；
-- 服务端写入 `cup.bracket[round][index]`，官网「杯」页晋级图据此从左往右渲染。
+- 服务端写入 `cup.bracket[round][index]`，官网「大会」页晋级图据此从左往右渲染。
 
-### 4.10.3 结束杯赛 endCup
+### 4.10.3 结束大会 endCup
 
 ```bash
 curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" \
@@ -880,17 +880,17 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
   本动作只删除权威报名，不按 cup 状态拒绝（`cup.status` 整届保持 open 直至 endCup）；
 - 响应：`{ ok, removed, cup }`；角色：`cup`/`admin`。
 
-### 4.10.6 关闭超时杯赛房（close 的 cup 权限）
+### 4.10.6 关闭超时大会房（close 的 cup 权限）
 
 `role:"cup"` agent 可对**本平台创建**的房调 `close`（owner 校验；非本人创建 → 403 `not_owner`），
 reason 建议 `timeout`（房间关闭后对局方收到「长时间无操作，房间关闭」文案）；超时时长由
 AI 平台自行判定；对仍在推进的对局默认有活跃保护，确需强制关闭时带 `force:true`（仅 cup/admin）。
 
-### 4.10.7 杯赛最小编排流程参考（pvp / pve / eve）
+### 4.10.7 大会最小编排流程参考（pvp / pve / eve）
 
 ```
-1. createCup { name, mode, aiRoster, prize }                    # 建杯，open 报名
-2. 真人端「杯」页报名 → 收到回调 event:"tour_signup"             # 见 0.7
+1. createCup { name, mode, aiRoster, prize }                    # 建大会，open 报名
+2. 真人端「大会」页报名 → 收到回调 event:"tour_signup"             # 见 0.7
 3. 等报名窗口结束 → 用 aiRoster 补满 8 席
 4. 建八强 4 场：
    pvp : create { type:"tour", cupId, round:"QF", homeUid:A, awayUid:B }
@@ -964,7 +964,7 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
 - 用 `join { liveId, side: mySide }` 加入（你的席位已在建房时经 `aiAgentFor` 预留给本 agent；他人加入 → `403 seat_reserved`）。
 - `mySide` 与 `state`/`act` 的阵营绑定一致；真人对手半局切换用 `duelHalfStart`（见 4.4/4.5）。
 - **缺席判负**：开赛后限时未 `join`（平台按 `no_show_minutes` 判定）将判负淘汰，请保持轮询并及时进场；比赛结果由服务端权威判定。
-- 奖励：大会冠军奖励技能包**仅真人参赛者**有效；第三方 AI 的胜负会正常计入杯赛晋级与排行（按你报名用的可读名展示）。
+- 奖励：大会冠军奖励技能包**仅真人参赛者**有效；第三方 AI 的胜负会正常计入大会晋级与排行（按你报名用的可读名展示）。
 
 ---
 

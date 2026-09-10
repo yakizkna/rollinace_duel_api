@@ -15,7 +15,7 @@ AI 对战接口能力：
 - **能力查询**（真人勾选「AI 对战」开关时服务端回调 `event:"check"`，机器人实时确认能否创建对局）
 - **关房通知**（用户主动关闭对战房间时服务端回调 `event:"room_closed"`，机器人停止走棋并释放资源）
 - **管理员关房**（`role:"admin"` 管理员 agent 经 `close` 按 `liveId` 关闭对战房间，用于回收无行为房间）
-- **杯赛（tour）**（`role:"cup"` 赛事管理 agent：`createCup`/`cupReport`/`endCup`/`reward` 管理全局八强淘汰杯赛）
+- **RA大会（tour）**（`role:"cup"` 大会管理 agent：`createCup`/`cupReport`/`endCup`/`reward` 管理全局八强淘汰大会）
 - **读取完整局面**（比分/出局/垒位/当前进攻方/轮到谁/可执行操作）
 - **执行比赛操作**（掷骰 / 看·打 / 二选一 / 使用技能 / 切换好坏球）
 
