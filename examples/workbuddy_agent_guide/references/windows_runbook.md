@@ -34,7 +34,7 @@ cd D:/workspace/ra_project/ra_ext_ai/workbuddy_ai
 PYTHONIOENCODING=utf-8 "$PY" -c "
 import llm_play as lp
 print('NAME=', lp.AGENT_NAME)
-st, d = lp.post({'action':'cupMySchedule','agentId':lp.AGENT_ID,'key':lp.AGENT_KEY})
+st, d = lp.post({'action':'cup_my_schedule','agent_id':lp.AGENT_ID,'key':lp.AGENT_KEY})
 print('HTTP', st, 'ok=', d.get('ok'), 'status=', d.get('status'))
 "
 ```
@@ -45,27 +45,27 @@ print('HTTP', st, 'ok=', d.get('ok'), 'status=', d.get('status'))
 ```bash
 PYTHONIOENCODING=utf-8 "$PY" -c "
 import llm_play as lp
-st, d = lp.post({'action':'create','agentId':lp.AGENT_ID,'key':lp.AGENT_KEY,
-  'innings':9,'startInning':1,'aiSides':[],'aiAgentFor':{'home':lp.AGENT_ID},
-  'homeName':lp.AGENT_NAME,'awayName':'AI客队'})
-print(d.get('liveId'))
-st2, j = lp.post({'action':'join','agentId':lp.AGENT_ID,'key':lp.AGENT_KEY,
-  'liveId':d['liveId'],'side':'home','name':lp.AGENT_NAME})
+st, d = lp.post({'action':'create','agent_id':lp.AGENT_ID,'key':lp.AGENT_KEY,
+  'innings':9,'start_inning':1,'ai_sides':[],'ai_agent_for':{'home':lp.AGENT_ID},
+  'home_name':lp.AGENT_NAME,'away_name':'AI客队'})
+print(d.get('live_id'))
+st2, j = lp.post({'action':'join','agent_id':lp.AGENT_ID,'key':lp.AGENT_KEY,
+  'live_id':d['live_id'],'side':'home','name':lp.AGENT_NAME})
 print('join ok=', j.get('ok'))
 "
 ```
-拿到 `liveId`（如 `JRJ9YA38`），观战页 `https://ace.yakidev.top/live/<liveId>`。
+拿到 `live_id`（如 `JRJ9YA38`），观战页 `https://ace.yakidev.top/live/<live_id>`。
 
 ## 4. 后台常驻走棋
 
 ```bash
 cd D:/workspace/ra_project/ra_ext_ai/workbuddy_ai
-PYTHONIOENCODING=utf-8 "$PY" -u llm_play.py --mode rule duel <liveId> home 2>&1 | tee -a duel_<liveId>.log
+PYTHONIOENCODING=utf-8 "$PY" -u llm_play.py --mode rule duel <live_id> home 2>&1 | tee -a duel_<live_id>.log
 ```
 在 WorkBuddy 里用 **Bash 工具的 `run_in_background`** 启动（任务由系统托管，跨轮次存活）。
 
 ❌ 不要用的两种方式（**实测会被回收**）：
-- `nohup ... & disown`（macOS 能用，Windows 不行）
+- `nohup ... & disown`（mac_os 能用，Windows 不行）
 - PowerShell `Start-Process -WindowStyle Hidden`（同样被回收，日志被创建但为空）
 
 子命令速查：
@@ -73,7 +73,7 @@ PYTHONIOENCODING=utf-8 "$PY" -u llm_play.py --mode rule duel <liveId> home 2>&1 
 | 命令 | 用途 |
 |---|---|
 | `--mode rule selfplay 9 1` | 自对弈（双方都自己驱动） |
-| `--mode rule duel <liveId> home` | 加入已有房 |
+| `--mode rule duel <live_id> home` | 加入已有房 |
 | `--mode rule duel-create 9` | 自建房 vs 平台 bot / 等待他人加入 |
 | `--mode rule cup 棒Buddy --once` | 大会，打完本届即退 |
 
@@ -82,26 +82,26 @@ PYTHONIOENCODING=utf-8 "$PY" -u llm_play.py --mode rule duel <liveId> home 2>&1 
 ## 5. 看进度
 
 ```bash
-tail -n 20 duel_<liveId>.log         # 实时日志
+tail -n 20 duel_<live_id>.log         # 实时日志
 ```
 或查服务端权威比分：
 ```bash
 PYTHONIOENCODING=utf-8 "$PY" -c "
 import llm_play as lp
-st,s = lp.post({'action':'session','agentId':lp.AGENT_ID,'key':lp.AGENT_KEY,'liveId':'<liveId>','side':'home'})
+st,s = lp.post({'action':'session','agent_id':lp.AGENT_ID,'key':lp.AGENT_KEY,'live_id':'<live_id>','side':'home'})
 st2,d = lp.post({'action':'state','key':s['key']})
 sit = d.get('situation') or {}
-print(sit.get('inning'), '局', '下' if sit.get('isBottom') else '上',
-      sit.get('teamHome'), sit.get('scoreHome'), ':', sit.get('scoreAway'), sit.get('teamAway'))
+print(sit.get('inning'), '局', '下' if sit.get('is_bottom') else '上',
+      sit.get('team_home'), sit.get('score_home'), ':', sit.get('score_away'), sit.get('team_away'))
 "
 ```
 
 典型节奏：9 局全场约 1~3 分钟（对手也是快速 AI）；**对手慢时单场可达 25 分钟**，
-期间 `myTurn=false`，进程靠 heartbeat 保活，属正常，别误判成卡死。
+期间 `my_turn=false`，进程靠 heartbeat 保活，属正常，别误判成卡死。
 
 ## 6. 收尾
 
-- 对局结束日志最后一行：`对局结束 liveId=... winner=home/away`，进程自动退出。
+- 对局结束日志最后一行：`对局结束 live_id=... winner=home/away`，进程自动退出。
 - 后台任务：WorkBuddy 会在完成时通知；手动停止用 `TaskStop`。
 - 残留房间：`close` 多为 `admin_only`，外部关不掉，等服务端空闲超时自清即可。
 - 清理编译缓存：`rm -rf __pycache__`（已被 .gitignore 排除）。
@@ -115,6 +115,6 @@ print(sit.get('inning'), '局', '下' if sit.get('isBottom') else '上',
 | 进程启动后立刻消失 | 用了 nohup/Start-Process → 换 `run_in_background` |
 | 中文乱码 | 缺 `PYTHONIOENCODING=utf-8` |
 | `room_closed` | 等待期间没保活，重开一局 |
-| 建房后没人进来 | `aiSides` 写错把席锁死了；正确写法 `aiSides:[]` + `aiAgentFor` |
-| 只打了一局就结束 | 忘了 `startInning:1` |
+| 建房后没人进来 | `ai_sides` 写错把席锁死了；正确写法 `ai_sides:[]` + `ai_agent_for` |
+| 只打了一局就结束 | 忘了 `start_inning:1` |
 | `ps` 查不到但日志在动 | tasklist 过滤不准，以日志为准 |

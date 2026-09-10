@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Rollin' Ace 最小可跑规则机器人（纯标准库，Windows / macOS / Linux 通用）
+Rollin' Ace 最小可跑规则机器人（纯标准库，Windows / mac_os / Linux 通用）
 
 已内嵌指南全部关键教训：
   * post() 全异常捕获（urllib 超时抛 URLError，不是 HTTPError）
-  * 每步重读 state，照 allowedActions 出招，绝不本地维护局面
+  * 每步重读 state，照 allowed_actions 出招，绝不本地维护局面
   * act 被拒时按 reason 自纠 + ban 集去重，3 次失败强制 roll 兜底，绝不退赛
   * 等待期间发 heartbeat（30s 空闲会被 room_closed）
   * 道具：本半局 ≤3 次、同种不重复；【令】只在额度用满时才用
-  * 建房 aiSides:[] + aiAgentFor 防死锁；startInning 显式传 1 才打满全场
+  * 建房 ai_sides:[] + ai_agent_for 防死锁；start_inning 显式传 1 才打满全场
   * 大会 --once：打完本届即退（记 edition，届次切换/no_cup 退出）
 
 凭证（二选一）：
@@ -17,9 +17,9 @@ Rollin' Ace 最小可跑规则机器人（纯标准库，Windows / macOS / Linux
   2) 同目录 agent_key.txt：首行=显示名，其后 agent_id=xxx / agent_key=xxx
 
 用法：
-  python -u minimal_bot.py selfplay  [innings] [startInning]
-  python -u minimal_bot.py duel      <liveId> [side]
-  python -u minimal_bot.py duel-create [innings] [startInning=1]
+  python -u minimal_bot.py selfplay  [innings] [start_inning]
+  python -u minimal_bot.py duel      <live_id> [side]
+  python -u minimal_bot.py duel-create [innings] [start_inning=1]
   python -u minimal_bot.py cup       [队名] [--once]
 环境变量：RA_BASE（换端点）、RA_STEP_DELAY=0（零延迟）、PYTHONIOENCODING=utf-8（Windows 中文）
 """
@@ -98,7 +98,7 @@ def _sit(d):
 
 def choose_pitch(d):
     sit, _ = _sit(d)
-    me, opp = sit.get("scoreMe"), sit.get("scoreOpp")
+    me, opp = sit.get("score_me"), sit.get("score_opp")
     late = (sit.get("inning") or 1) >= 7
     if me is not None and opp is not None:
         if me < opp:
@@ -111,7 +111,7 @@ def choose_pitch(d):
 def want_bs(d):
     sit, _ = _sit(d)
     bases = sit.get("bases") or [False, False, False]
-    me, opp = sit.get("scoreMe"), sit.get("scoreOpp")
+    me, opp = sit.get("score_me"), sit.get("score_opp")
     if any(bases):
         return True
     if me is not None and opp is not None and me < opp:
@@ -123,59 +123,59 @@ def decide_item(d):
     """返回 (op, extra) 或 (None, None)。只在局面合法用道具时被调用。"""
     sit, items = _sit(d)
     stock = items.get("stock") or {}
-    half = items.get("halfUsed") or {}
+    half = items.get("half_used") or {}
     used = set(half.get("used") or [])
-    cap = (items.get("rules") or {}).get("skillsPerHalf", 3)
+    cap = (items.get("rules") or {}).get("skills_per_half", 3)
     if half.get("count", 0) >= cap:
         return (None, None)                  # 本半局额度已用满
     bases = sit.get("bases") or [False, False, False]
     outs = sit.get("outs", 0)
-    me, opp = sit.get("scoreMe"), sit.get("scoreOpp")
+    me, opp = sit.get("score_me"), sit.get("score_opp")
     behind = (me is not None and opp is not None and me < opp)
 
     # 1) 盗垒：一垒有人 且 二垒空（否则 condition_failed）
     if stock.get("steal", 0) > 0 and "steal" not in used and bases[0] and not bases[1] and outs < 2:
-        return ("item", {"itemId": "steal"})
+        return ("item", {"item_id": "steal"})
     # 2) 装棒：有跑者或落后 → 本打席 1B 自动升 2B
-    if (stock.get("bat", 0) > 0 and "bat" not in used and not items.get("batArmed")
+    if (stock.get("bat", 0) > 0 and "bat" not in used and not items.get("bat_armed")
             and (any(bases) or behind)):
-        return ("item", {"itemId": "bat"})
+        return ("item", {"item_id": "bat"})
     # 3) 令：仅当额度用满才用（实测「bat→ling」无脑连发多半是「沟通无效」，纯浪费）
     if stock.get("ling", 0) > 0 and "ling" not in used and half.get("count", 0) >= cap:
-        return ("item", {"itemId": "ling"})
+        return ("item", {"item_id": "ling"})
     # 4) 牺牲推进
     if (stock.get("sac", 0) > 0 and "sac" not in used and outs < 2
             and (bases[0] or bases[1]) and not bases[2]):
-        return ("item", {"itemId": "sac"})
+        return ("item", {"item_id": "sac"})
     # 5) 落后且有跑者：迷雾 / 抡 搏一把
     if behind and any(bases):
         if stock.get("mist", 0) > 0 and "mist" not in used:
-            return ("item", {"itemId": "mist"})
+            return ("item", {"item_id": "mist"})
         if stock.get("lun", 0) > 0 and "lun" not in used:
-            return ("item", {"itemId": "lun"})
+            return ("item", {"item_id": "lun"})
     return (None, None)
 
 
 def decide(d, allowed, ban=None):
-    """规则模式核心：allowedActions + 局面 → 单一 (op, extra)。"""
+    """规则模式核心：allowed_actions + 局面 → 单一 (op, extra)。"""
     a = set(allowed) - set(ban or ())
     sit, _ = _sit(d)
     if "init" in a:
         return ("init", {})
-    if "duelHalfStart" in a:
-        return ("duelHalfStart", {})
-    if "setPitch" in a:
-        return ("setPitch", {"pitch": choose_pitch(d)})
+    if "duel_half_start" in a:
+        return ("duel_half_start", {})
+    if "set_pitch" in a:
+        return ("set_pitch", {"pitch": choose_pitch(d)})
     if "item" in a:
         op, extra = decide_item(d)
         if op and op not in (ban or ()):
             return (op, extra)
-    if "setBS" in a and not sit.get("bsEnabled") and not sit.get("plate") and want_bs(d):
-        return ("setBS", {"bsEnabled": True})
+    if "set_bs" in a and not sit.get("bs_enabled") and not sit.get("plate") and want_bs(d):
+        return ("set_bs", {"bs_enabled": True})
     if "swing" in a or "read" in a:
         strikes, balls = sit.get("strikes", 0), sit.get("balls", 0)
         bases = sit.get("bases") or [False, False, False]
-        me, opp = sit.get("scoreMe"), sit.get("scoreOpp")
+        me, opp = sit.get("score_me"), sit.get("score_opp")
         if strikes >= 2:
             op = "swing"                     # 两好球必打，防三振
         elif balls >= 3:
@@ -186,9 +186,9 @@ def decide(d, allowed, ban=None):
             op = "read"
         if op in a:
             return (op, {})
-    if "take1B" in a or "roll2" in a:
+    if "take1b" in a or "roll2" in a:
         outs, bases = sit.get("outs", 0), sit.get("bases") or [False, False, False]
-        op = "take1B" if (outs >= 2 or not any(bases)) else "roll2"
+        op = "take1b" if (outs >= 2 or not any(bases)) else "roll2"
         if op in a:
             return (op, {})
     if "roll" in a:
@@ -198,7 +198,7 @@ def decide(d, allowed, ban=None):
 
 def take_turn(key, side, d):
     """执行一步；被拒则换动作重试，3 次后强制 roll。绝不因一次失败放弃整场。"""
-    allowed = d.get("allowedActions") or []
+    allowed = d.get("allowed_actions") or []
     banned = []
     for _ in range(3):
         op, extra = decide(d, allowed, ban=banned)
@@ -228,11 +228,11 @@ def play_loop(key, side, live_id):
         if not d.get("ok"):
             time.sleep(3)
             continue
-        if d.get("matchStatus") == "ended":
-            log("对局结束 liveId=%s winner=%s"
+        if d.get("match_status") == "ended":
+            log("对局结束 live_id=%s winner=%s"
                 % (live_id, (d.get("situation") or {}).get("winner") or d.get("winner")))
             return
-        if d.get("myTurn") and d.get("allowedActions"):
+        if d.get("my_turn") and d.get("allowed_actions"):
             res = take_turn(key, side, d)
             time.sleep(0.5 if res == "retry" else STEP_DELAY)
             continue
@@ -242,13 +242,13 @@ def play_loop(key, side, live_id):
 
 # ---------------------------------------------------------------- 入口
 def join(live_id, side):
-    st, d = post({"action": "join", "agentId": AGENT_ID, "key": AGENT_KEY,
-                  "liveId": live_id, "side": side, "name": AGENT_NAME})
+    st, d = post({"action": "join", "agent_id": AGENT_ID, "key": AGENT_KEY,
+                  "live_id": live_id, "side": side, "name": AGENT_NAME})
     if d.get("ok") and d.get("key"):
         return d["key"]
     if d.get("reason") == "seat_taken":            # 已占该席（如进程重启）→ 回退 session
-        st, d = post({"action": "session", "agentId": AGENT_ID, "key": AGENT_KEY,
-                      "liveId": live_id, "side": side})
+        st, d = post({"action": "session", "agent_id": AGENT_ID, "key": AGENT_KEY,
+                      "live_id": live_id, "side": side})
         if d.get("ok") and d.get("key"):
             return d["key"]
     log("join 失败 %s" % json.dumps(d, ensure_ascii=False)[:200])
@@ -256,16 +256,16 @@ def join(live_id, side):
 
 
 def run_duel_create(innings=9, start_inning=1, side="home"):
-    """自建房：aiSides=[] + aiAgentFor 把主队留给自己，客队开放（平台 bot 或别的 agent 进）。"""
-    st, d = post({"action": "create", "agentId": AGENT_ID, "key": AGENT_KEY,
-                  "innings": innings, "startInning": start_inning,
-                  "aiSides": [], "aiAgentFor": {side: AGENT_ID},
-                  "homeName": AGENT_NAME, "awayName": "AI客队"})
+    """自建房：ai_sides=[] + ai_agent_for 把主队留给自己，客队开放（平台 bot 或别的 agent 进）。"""
+    st, d = post({"action": "create", "agent_id": AGENT_ID, "key": AGENT_KEY,
+                  "innings": innings, "start_inning": start_inning,
+                  "ai_sides": [], "ai_agent_for": {side: AGENT_ID},
+                  "home_name": AGENT_NAME, "away_name": "AI客队"})
     if not d.get("ok"):
         log("create 失败 %s" % json.dumps(d, ensure_ascii=False)[:200])
         return
-    live_id = d["liveId"]
-    log("建房成功 liveId=%s（%s 局制，从第 %s 局上开始）" % (live_id, innings, start_inning))
+    live_id = d["live_id"]
+    log("建房成功 live_id=%s（%s 局制，从第 %s 局上开始）" % (live_id, innings, start_inning))
     log("观战地址: https://ace.yakidev.top/live/%s" % live_id)
     key = join(live_id, side)
     if key:
@@ -276,7 +276,7 @@ def run_cup(once=False):
     joined_edition = None
     log("进入大会循环（队名=%s，单次=%s）" % (AGENT_NAME, once))
     while True:
-        st, d = post({"action": "cupMySchedule", "agentId": AGENT_ID, "key": AGENT_KEY})
+        st, d = post({"action": "cup_my_schedule", "agent_id": AGENT_ID, "key": AGENT_KEY})
         if not d.get("ok"):
             time.sleep(10)
             continue
@@ -287,7 +287,7 @@ def run_cup(once=False):
             log("[大会] 本届结束/届次切换，单次模式退出")
             return
         if status == "open":
-            st2, r = post({"action": "cupSignup", "agentId": AGENT_ID, "key": AGENT_KEY, "name": AGENT_NAME})
+            st2, r = post({"action": "cup_signup", "agent_id": AGENT_ID, "key": AGENT_KEY, "name": AGENT_NAME})
             if r.get("ok"):
                 joined_edition = ed
                 log("[大会] 报名成功")
@@ -300,9 +300,9 @@ def run_cup(once=False):
                 time.sleep(15)
                 continue
             m = ms[0]
-            live_id = m.get("liveId")
-            my_side = m.get("side") or m.get("mySide")
-            log("[大会] 进场 liveId=%s mySide=%s 对手=%s" % (live_id, my_side, m.get("opponent")))
+            live_id = m.get("live_id")
+            my_side = m.get("side") or m.get("my_side")
+            log("[大会] 进场 live_id=%s my_side=%s 对手=%s" % (live_id, my_side, m.get("opponent")))
             key = join(live_id, my_side)
             if key:
                 play_loop(key, my_side, live_id)
@@ -317,26 +317,26 @@ def main():
     if cmd == "selfplay":
         inn = int(args[1]) if len(args) > 1 else 9
         sti = int(args[2]) if len(args) > 2 else inn
-        st, d = post({"action": "create", "agentId": AGENT_ID, "key": AGENT_KEY,
-                      "innings": inn, "startInning": sti, "aiSides": ["home", "away"],
-                      "homeName": AGENT_NAME + "(主)", "awayName": AGENT_NAME + "(客)"})
+        st, d = post({"action": "create", "agent_id": AGENT_ID, "key": AGENT_KEY,
+                      "innings": inn, "start_inning": sti, "ai_sides": ["home", "away"],
+                      "home_name": AGENT_NAME + "(主)", "away_name": AGENT_NAME + "(客)"})
         if not d.get("ok"):
             log("create 失败 %s" % json.dumps(d, ensure_ascii=False)[:200])
             return
         keys = {k["side"]: k["key"] for k in d.get("keys") or []}
-        live = d["liveId"]
-        log("自对弈房 liveId=%s" % live)
+        live = d["live_id"]
+        log("自对弈房 live_id=%s" % live)
         while True:
             acted = False
             for side, key in keys.items():
                 st, d = post({"action": "state", "key": key})
                 if not d.get("ok"):
                     continue
-                if d.get("matchStatus") == "ended":
-                    log("对局结束 liveId=%s winner=%s"
+                if d.get("match_status") == "ended":
+                    log("对局结束 live_id=%s winner=%s"
                         % (live, (d.get("situation") or {}).get("winner")))
                     return
-                if d.get("myTurn") and d.get("allowedActions"):
+                if d.get("my_turn") and d.get("allowed_actions"):
                     take_turn(key, side, d)
                     time.sleep(STEP_DELAY)
                     acted = True
@@ -347,7 +347,7 @@ def main():
                 time.sleep(1)
     elif cmd == "duel":
         if len(args) < 2:
-            sys.exit("用法: minimal_bot.py duel <liveId> [side]")
+            sys.exit("用法: minimal_bot.py duel <live_id> [side]")
         side = args[2] if len(args) > 2 else "away"
         key = join(args[1], side)
         if key:

@@ -12,24 +12,24 @@
 ---------------------------------------------------------------------------
 - 基址：POST {BASE}/api/ai，参数放 JSON body，仅 POST。
 - 鉴权分两段：
-    * 换票（session/create/join/list/cupSignup/cupCancel/cupMySchedule）：
-      带 agentId + key（agent 凭证；key 请妥善保存）。
+    * 换票（session/create/join/list/cup_signup/cup_cancel/cup_my_schedule）：
+      带 agent_id + key（agent 凭证；key 请妥善保存）。
     * 会话（state/act/heartbeat/leave）：带换票/join 返回的 session key
       （与「房间 + 阵营」绑定，跨房 403 session_mismatch）。
 - 判断成功一律以响应里的 `ok == true` 为准（业务失败多为 HTTP 200 + ok:false + reason）。
-- 走棋范式：先 `state` 读局面，仅当 `myTurn==true` 且 `allowedActions` 非空时 `act`；
-  换边与比赛结束由服务端自动推进，机器人只需按 `allowedActions` 循环。
+- 走棋范式：先 `state` 读局面，仅当 `my_turn==true` 且 `allowed_actions` 非空时 `act`；
+  换边与比赛结束由服务端自动推进，机器人只需按 `allowed_actions` 循环。
 
 ---------------------------------------------------------------------------
 二、极简策略（够用、能打完一局；接入方按需替换 decide()）
 ---------------------------------------------------------------------------
-  1) 关闭好坏球 —— allowed 含 setBS 且 bsEnabled 开着时，先关，回纯 roll；
+  1) 关闭好坏球 —— allowed 含 set_bs 且 bs_enabled 开着时，先关，回纯 roll；
   2) 普通打席 roll —— 一律 op=roll；
-  3) 二选一 take1B —— phase=choose 时固定 take1B（安打保底）；
-  4) 能盗就盗 —— 一垒有人且二垒空、出局 <2 时 op=item itemId=steal（引擎 canUse 把关）；
-  5) 防守选投手 bs —— allowed 含 setPitch 时固定 pitch=bs。
+  3) 二选一 take1b —— phase=choose 时固定 take1b（安打保底）；
+  4) 能盗就盗 —— 一垒有人且二垒空、出局 <2 时 op=item item_id=steal（引擎 can_use 把关）；
+  5) 防守选投手 bs —— allowed 含 set_pitch 时固定 pitch=bs。
 
-铁律：只按服务端 allowedActions 行动，从不猜非法动作；act 失败按 reason 自纠。
+铁律：只按服务端 allowed_actions 行动，从不猜非法动作；act 失败按 reason 自纠。
 
 ---------------------------------------------------------------------------
 三、用法
@@ -39,7 +39,7 @@
     export RA_BASE=https://ace.yakidev.top   # 可选，默认正式环境
 
     python ai_duel_bot.py selfplay               # 自对弈（create → 双方走棋）
-    python ai_duel_bot.py duel <liveId> [side]   # 加入对战房（默认客队 away）
+    python ai_duel_bot.py duel <live_id> [side]   # 加入对战房（默认客队 away）
     python ai_duel_bot.py cup [队名]             # 参加大会（常驻：报名→进场→走棋→晋级）
 """
 
@@ -91,8 +91,8 @@ class Bot:
         name 必须与注册名一致（不一致 → 400 name_mismatch）；**不传则用注册名（推荐）**。
         """
         self.live_id, self.side = live_id, side
-        payload = {"action": "join", "agentId": self.agent_id, "key": self.agent_key,
-                   "liveId": live_id, "side": side}
+        payload = {"action": "join", "agent_id": self.agent_id, "key": self.agent_key,
+                   "live_id": live_id, "side": side}
         if name:
             payload["name"] = name
         st, d = post(payload)
@@ -101,8 +101,8 @@ class Bot:
             return True
         # 断线重连：席位已被自己占用时，用 session 重签 key
         if d.get("reason") == "seat_taken":
-            st, d = post({"action": "session", "agentId": self.agent_id, "key": self.agent_key,
-                          "liveId": live_id, "side": side})
+            st, d = post({"action": "session", "agent_id": self.agent_id, "key": self.agent_key,
+                          "live_id": live_id, "side": side})
             if d.get("ok") and d.get("key"):
                 self.key = d["key"]
                 return True
@@ -110,7 +110,7 @@ class Bot:
         return False
 
     def state(self):
-        """读取当前局面（含 myTurn / allowedActions / situation）。失败返回 None。"""
+        """读取当前局面（含 my_turn / allowed_actions / situation）。失败返回 None。"""
         if not self.key and not self.join(self.live_id, self.side):
             return None
         st, d = post({"action": "state", "key": self.key})
@@ -122,25 +122,25 @@ class Bot:
 
     # ---------------- 极简策略 ----------------
     def decide(self, s):
-        """按 allowedActions 挑一个动作，返回 (op, extra) 或 None（暂无可做）。"""
+        """按 allowed_actions 挑一个动作，返回 (op, extra) 或 None（暂无可做）。"""
         sit = s.get("situation") or {}
-        allowed = s.get("allowedActions") or []
+        allowed = s.get("allowed_actions") or []
         bases = sit.get("bases") or []
-        bs_en = bool(sit.get("bsEnabled"))
+        bs_en = bool(sit.get("bs_enabled"))
         outs = sit.get("outs") or 0
 
         if "init" in allowed:                                  # 房间尚无局面，我方是进攻方
             return "init", {}
-        if "duelHalfStart" in allowed:                         # 真人半局结束，接力开新半局
-            return "duelHalfStart", {}
-        if "setPitch" in allowed:                              # 我方防守，先选投手风格
-            return "setPitch", {"pitch": PITCH}
+        if "duel_half_start" in allowed:                         # 真人半局结束，接力开新半局
+            return "duel_half_start", {}
+        if "set_pitch" in allowed:                              # 我方防守，先选投手风格
+            return "set_pitch", {"pitch": PITCH}
         if "item" in allowed and bases and bases[0] and not bases[1] and outs < 2:
-            return "item", {"itemId": "steal"}                 # 一垒有人且二垒空 → 盗垒
-        if "take1B" in allowed:                                # 二选一固定 take1B
-            return "take1B", {}
-        if "setBS" in allowed and bs_en:                       # 关掉好坏球，回纯 roll
-            return "setBS", {"bsEnabled": False}
+            return "item", {"item_id": "steal"}                 # 一垒有人且二垒空 → 盗垒
+        if "take1b" in allowed:                                # 二选一固定 take1b
+            return "take1b", {}
+        if "set_bs" in allowed and bs_en:                       # 关掉好坏球，回纯 roll
+            return "set_bs", {"bs_enabled": False}
         if "roll" in allowed:
             return "roll", {}
         if "read" in allowed:
@@ -156,21 +156,21 @@ class Bot:
         """join 占席后，state/act 循环打到本场结束。返回 "done" / "join_failed"。"""
         if not self.join(live_id, side):
             return "join_failed"
-        self.log(f"== 开赛 liveId={live_id} side={side} ==")
+        self.log(f"== 开赛 live_id={live_id} side={side} ==")
         while True:
             s = self.state()
             if not s:
                 time.sleep(3)
                 continue
             sit = s.get("situation") or {}
-            room_closed = s.get("roomClosed")
-            ms = s.get("matchStatus")
+            room_closed = s.get("room_closed")
+            ms = s.get("match_status")
             # 终态：房间关闭 / 比赛结束 / 已判胜负
-            if room_closed or ms == "ended" or sit.get("winner") or sit.get("duelEnd") == "match":
-                self.log(f"单局结束 roomClosed={room_closed} matchStatus={ms} "
+            if room_closed or ms == "ended" or sit.get("winner") or sit.get("duel_end") == "match":
+                self.log(f"单局结束 room_closed={room_closed} match_status={ms} "
                          f"winner={sit.get('winner') or s.get('winner')}")
                 return "done"
-            if not s.get("myTurn"):
+            if not s.get("my_turn"):
                 time.sleep(2.5)
                 continue
             pick = self.decide(s)
@@ -195,25 +195,25 @@ class Bot:
     # ---------------- 场景 1：自对弈 ----------------
     def self_play(self, innings: int = 3):
         """create 建自对弈房（双方 AI），用两把 key 交替走棋。"""
-        st, d = post({"action": "create", "agentId": self.agent_id, "key": self.agent_key,
-                      "innings": innings, "startInning": innings,
-                      "aiSides": ["home", "away"], "homeName": "AI主队", "awayName": "AI客队"})
+        st, d = post({"action": "create", "agent_id": self.agent_id, "key": self.agent_key,
+                      "innings": innings, "start_inning": innings,
+                      "ai_sides": ["home", "away"], "home_name": "AI主队", "away_name": "AI客队"})
         if not d.get("ok"):
             self.log(f"create 失败 {json.dumps(d, ensure_ascii=False)[:160]}")
             return
         keys = {k["side"]: k["key"] for k in d.get("keys") or []}
-        self.log(f"自对弈房 liveId={d.get('liveId')} 双方 key 已就绪")
-        # 客场先攻；换边由服务端推进，这里按 state 的 toMove 切 key
+        self.log(f"自对弈房 live_id={d.get('live_id')} 双方 key 已就绪")
+        # 客场先攻；换边由服务端推进，这里按 state 的 to_move 切 key
         while True:
             to_move = None
             for side, key in keys.items():
                 st, d = post({"action": "state", "key": key})
                 if not d.get("ok"):
                     continue
-                if d.get("matchStatus") == "ended":
+                if d.get("match_status") == "ended":
                     self.log(f"自对弈结束 winner={d.get('winner')}")
                     return
-                if d.get("toMove") == side:
+                if d.get("to_move") == side:
                     to_move = side
                     break
             if not to_move:
@@ -221,7 +221,7 @@ class Bot:
                 continue
             key = keys[to_move]
             st, d = post({"action": "state", "key": key})
-            if not (d.get("ok") and d.get("myTurn") and d.get("allowedActions")):
+            if not (d.get("ok") and d.get("my_turn") and d.get("allowed_actions")):
                 time.sleep(1)
                 continue
             pick = self.decide(d)
@@ -236,12 +236,12 @@ class Bot:
 
     # ---------------- 场景 2：参加大会 ----------------
     def cup_schedule(self):
-        st, d = post({"action": "cupMySchedule", "agentId": self.agent_id, "key": self.agent_key})
+        st, d = post({"action": "cup_my_schedule", "agent_id": self.agent_id, "key": self.agent_key})
         return d if d.get("ok") else None
 
     def cup_signup(self, name: str = None):
         """报名；name 必须与注册名一致（不一致 → 400 name_mismatch），不传则用注册名。"""
-        payload = {"action": "cupSignup", "agentId": self.agent_id, "key": self.agent_key}
+        payload = {"action": "cup_signup", "agent_id": self.agent_id, "key": self.agent_key}
         if name:
             payload["name"] = name
         st, d = post(payload)
@@ -281,13 +281,13 @@ class Bot:
                 ms = sch.get("matches") or []
                 active = [m for m in ms
                           if m.get("status") in ("playing", "pending", "scheduled")
-                          and m.get("liveId") and m.get("liveId") not in done_lives]
+                          and m.get("live_id") and m.get("live_id") not in done_lives]
                 for m in active:
-                    r = self.play_match(m.get("liveId"), m.get("mySide") or "away")
+                    r = self.play_match(m.get("live_id"), m.get("my_side") or "away")
                     if r == "join_failed":
                         time.sleep(4)        # 房尚未 ready → 稍后重试
                     else:
-                        done_lives.add(m.get("liveId"))
+                        done_lives.add(m.get("live_id"))
                 if not active:
                     time.sleep(5)
                 continue
@@ -309,7 +309,7 @@ def main() -> int:
         bot.self_play()
     elif cmd == "duel":
         if len(sys.argv) < 3:
-            print("用法: python ai_duel_bot.py duel <liveId> [side]", file=sys.stderr)
+            print("用法: python ai_duel_bot.py duel <live_id> [side]", file=sys.stderr)
             return 2
         live_id = sys.argv[2]
         side = sys.argv[3] if len(sys.argv) > 3 else "away"

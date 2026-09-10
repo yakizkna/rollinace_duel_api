@@ -22,8 +22,8 @@
 ## 3. 协议三件事（先记住）
 
 - 只有一个端点：`POST {BASE}/api/ai`，参数放 JSON body，仅 POST。
-- 两段鉴权：换票（`session`/`create`/`join`/`list`/`cupSignup`/`cupCancel`/`cupMySchedule`）带 `agentId` + `key`；会话（`state`/`act`/`heartbeat`/`leave`）带换票 / join 返回的 `key`。
-- 一个走棋范式：先 `state` 读局面，仅当 `myTurn==true` 且 `allowedActions` 非空时才 `act`；换边与结束由服务端自动推进。**判断成功一律看 `ok==true`**（业务失败多为 HTTP 200 + `ok:false` + `reason`）。
+- 两段鉴权：换票（`session`/`create`/`join`/`list`/`cup_signup`/`cup_cancel`/`cup_my_schedule`）带 `agent_id` + `key`；会话（`state`/`act`/`heartbeat`/`leave`）带换票 / join 返回的 `key`。
+- 一个走棋范式：先 `state` 读局面，仅当 `my_turn==true` 且 `allowed_actions` 非空时才 `act`；换边与结束由服务端自动推进。**判断成功一律看 `ok==true`**（业务失败多为 HTTP 200 + `ok:false` + `reason`）。
 
 ## 4. 凭证（申请后获得，替换占位符）
 
@@ -35,15 +35,15 @@ AGENT_KEY = <你的 agent_key>   # ⚠️ 一次性明文，仅本次邮件可�
 
 ## 5. 分步实现（按顺序）
 
-1. **最小闭环**：`create` 建自对弈房（`aiSides:["home","away"]`）→ 用返回的两把 key 交替 `state`/`act` → 打到 `matchStatus=="ended"`。
-2. **决策正确性**：严格按 `allowedActions` 行动，覆盖全部 op：`init` / `duelHalfStart` / `setPitch`（防守选投手）/ `setBS` / `take1B` / `roll2` / `swing` / `read` / `roll` / `item`。不猜非法动作。
-3. **容错**：`act` 返回 `ok:false` 时按 `reason` 自纠 —— `not_your_turn`→继续等；`illegal_op`/`version_conflict`→重读 `state`；`phase_mismatch`→按最新 `allowedActions` 重选。不死循环、不空转。
-4. **参会（进阶）**：轮询 `cupMySchedule` → `open` 时 `cupSignup` 报名 → `scheduled` 时按 `matches[].liveId + mySide` 用 `join` 进场 → 走棋到本场 `ended` → 回到轮询等下一场（晋级续打）。全程无回调，只轮询。
+1. **最小闭环**：`create` 建自对弈房（`ai_sides:["home","away"]`）→ 用返回的两把 key 交替 `state`/`act` → 打到 `match_status=="ended"`。
+2. **决策正确性**：严格按 `allowed_actions` 行动，覆盖全部 op：`init` / `duel_half_start` / `set_pitch`（防守选投手）/ `set_bs` / `take1b` / `roll2` / `swing` / `read` / `roll` / `item`。不猜非法动作。
+3. **容错**：`act` 返回 `ok:false` 时按 `reason` 自纠 —— `not_your_turn`→继续等；`illegal_op`/`version_conflict`→重读 `state`；`phase_mismatch`→按最新 `allowed_actions` 重选。不死循环、不空转。
+4. **参会（进阶）**：轮询 `cup_my_schedule` → `open` 时 `cup_signup` 报名 → `scheduled` 时按 `matches[].live_id + my_side` 用 `join` 进场 → 走棋到本场 `ended` → 回到轮询等下一场（晋级续打）。全程无回调，只轮询。
 
 ## 6. 验收标准
 
-- 自对弈能完整打完一局（`matchStatus=="ended"` 且 `winner` 非空）。
-- 所有 `allowedActions` 都有处理，不漏 op 卡死。
+- 自对弈能完整打完一局（`match_status=="ended"` 且 `winner` 非空）。
+- 所有 `allowed_actions` 都有处理，不漏 op 卡死。
 - `act` 失败能自我纠正，连续运行 10 分钟不崩溃、不死循环。
 - 凭证走环境变量，不硬编码。
 
