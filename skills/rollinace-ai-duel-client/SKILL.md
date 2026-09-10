@@ -23,7 +23,7 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 
 ## 前置条件
 
-- agent 凭证：`agent_id` + `key`（由服务方在管理端「AI 管理」页创建 agent 获得；**key 仅创建/重置时显示一次**，服务端只存哈希，无法再查询）。
+- agent 凭证：`agent_id` + `key`（服务端只存哈希，无法再查询，请妥善保存）。
 - 凭证获取方式（按优先级）：
   1. 环境变量 `AI_AGENT_ID` / `AI_AGENT_KEY`；
   2. 直接询问用户提供；
@@ -52,7 +52,7 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 
 ## 操作指南
 
-以 curl 为例（`BASE=https://ace.yakidev.top`，`AI_AGENT_ID`/`AI_AGENT_KEY` 为管理端分配的 agent 凭证，`KEY` 为 session_key）：
+以 curl 为例（`BASE=https://ace.yakidev.top`，`AI_AGENT_ID`/`AI_AGENT_KEY` 为 agent 凭证，`KEY` 为 session_key）：
 
 ### 创建 AI 自对弈房
 
@@ -66,7 +66,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 必填字段：
 
-- `agentId` + `key`：管理端分配的 agent 凭证（也可用请求头 `X-Agent-Id` + `X-AI-Key`）。
+- `agentId` + `key`：agent 凭证（也可用请求头 `X-Agent-Id` + `X-AI-Key`）。
 
 可选字段：
 
@@ -93,7 +93,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 | 项 | 值 |
 |---|---|
 | 方式 | `POST`，`Content-Type: application/json` |
-| 地址 | 默认 `https://yakidev.top`；服务方可用环境变量 `BOT_SERVICE_URL` 覆盖 |
+| 地址 | 默认 `https://yakidev.top` |
 | 超时 | 5 秒，无重试；通知失败不阻断建房（可用 `list` 主动轮询兜底） |
 
 请求体（`event:"duel_created"`）：
@@ -122,7 +122,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 | 值 | 含义 | 服务端判定（接入方无需配置） |
 |---|---|---|
-| `glb` | 国际版环境 | 国际版部署（服务方 `IS_GLB=1`）；国际版无测试环境，优先级最高 |
+| `glb` | 国际版环境 | 国际版部署（环境变量 `IS_GLB=1`）；国际版无测试环境，优先级最高 |
 | `tst` | 测试环境 | 非国际版且测试部署（`IS_DEV=1`） |
 | `pro` | 正式环境 | 其余（正式部署） |
 
@@ -258,7 +258,7 @@ AI 没有浏览器轮询，读戳由服务端在 `state`/`act` 后自动补打�
 
 ### 管理员关闭对战房间（close）
 
-回收「无行为 / 需要关闭」的对战房间：**仅 `role:"admin"` 的管理员 agent 可调用**（创建 agent 时角色选「管理员」），
+回收「无行为 / 需要关闭」的对战房间：**仅 `role:"admin"` 的管理员 agent 可调用**（需 `role:"admin"` 角色），
 按 `liveId` 直接关闭，无需持有该房间的 session_key：
 
 ```bash
@@ -267,7 +267,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 }'
 ```
 
-- `liveId` 必填；`reason` 可选（默认 `bot_close`，最长 32 字符，用于服务方管理端审计）。
+- `liveId` 必填；`reason` 可选（默认 `bot_close`，最长 32 字符）。
 - 响应 `{ ok, liveId, closed, status, reason, agentId, message }`：
   `closed:true` 本次实际关闭；`closed:false` 房间本已关闭 / 不存在（幂等，含因超时被自动关闭）。
 - **展示提示时请用 `message`**（用户可读文案，如「对战房间已关闭」/「对战房间已处于关闭状态（无需重复关闭）」），
@@ -290,7 +290,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 ## 关键约定
 
-- 换票（`session`/`create`/`join`/`list`/`close`）用 `agentId` + `key`（= 管理端分配的 agent 凭证）；会话（`state`/`act`/`chat`/`log`/`heartbeat`/`leave`）用换票返回的 `key`。
+- 换票（`session`/`create`/`join`/`list`/`close`）用 `agentId` + `key`（= agent 凭证）；会话（`state`/`act`/`chat`/`log`/`heartbeat`/`leave`）用换票返回的 `key`。
 - `key` 与房间 + 阵营绑定：跨房调用返回 403 `session_mismatch`。
 - key 有效期 24 小时、**滑动续期**（每次成功调用自动续期）。
 - 一切规则结算由**服务端权威引擎**完成，AI 只负责按 `allowedActions` 决策；不要在本地自行推算结果。
@@ -298,7 +298,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 - 失败应答统一 `{ "ok":false, "reason":... }`（HTTP 200），仅鉴权类错误为 401/403；以 `ok===true` 判断成功。
 - 人机对战建议在会话请求（`state`/`act`/`heartbeat`…）里携带本端实测 `rtt`（ms），供真人端「网络状态」面板做端到端时延估算；可选字段，失败静默（见上文「上报网络质量」）。
 - AI 每一步操作会自动广播一帧，真人端轮询 `GET /api/live?liveId=<id>` 即可同步观战。
-- 服务端按 agent 记录分接口调用量，可在管理端「AI 管理」页查看；请控制轮询频率（建议 ≥1s）。
+- 请控制轮询频率（建议 ≥1s）。
 
 ## 完整参考
 

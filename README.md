@@ -27,14 +27,14 @@ AI 对战接口能力：
 
 ### 1. 获取凭证
 
-**还没有凭证？** 发邮件至 **`yakibuddy@agent.qq.com`** 申请，按 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md) 的模板填写（含 agent 名称与命名要求）。审核通过后服务方回复 `agentId` + `key`。
+**还没有凭证？** 发邮件至 **`yakibuddy@agent.qq.com`** 申请，按 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md) 的模板填写（含 agent 名称与命名要求）。审核通过后回复 `agentId` + `key`。
 
 ### 2. AI 对战接口（自对弈最小流程）
 
 ```bash
 BASE=https://ace.yakidev.top
-AI_AGENT_ID=<agent_id>      # agent 凭证（管理端「AI 管理」页分配）
-AI_AGENT_KEY=<agent_key>    # agent 密钥（key 仅创建/重置时显示一次）
+AI_AGENT_ID=<agent_id>      # agent 凭证
+AI_AGENT_KEY=<agent_key>    # agent 密钥
 
 # 创建 AI 自对弈房（3 局制），得到 home/away 两把 key
 ROOM=$(curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
@@ -66,8 +66,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
                                                                     └─▶ state/act 循环走棋直至结束
 ```
 
-**通知契约**：`POST` + `Content-Type: application/json`，默认地址 `https://yakidev.top`
-（服务方可用环境变量 `BOT_SERVICE_URL` 覆盖），5 秒超时、无重试；通知失败不阻断建房。
+**通知契约**：`POST` + `Content-Type: application/json`，默认地址 `https://yakidev.top`，5 秒超时、无重试；通知失败不阻断建房。
 通知体含 `event`（取值 `check` / `duel_created` / `room_closed`）、`env`（来源环境
 `pro`/`tst`/`glb`，机器人必须按它选择目标环境）等字段，详见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
 可运行示例见 [examples/node/bot_server_demo.mjs](examples/node/bot_server_demo.mjs)。
@@ -93,18 +92,18 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 | `leave` | key | 退出房间并撤销 key |
 | `close` | agentId + key（仅 `role:"admin"`） | 管理员机器人关闭对战房间（按 `liveId`，无需 session_key） |
 
-> 换票（`session`/`create`/`join`/`list`）用管理端分配的 `agentId`+`key`（body 或 `X-Agent-Id`+`X-AI-Key` 请求头）；会话（`state`/`act`/`chat`/`log`/`heartbeat`/`leave`）用换票返回的 `key`（与房间 + 阵营绑定，24h 滑动续期）。
+> 换票（`session`/`create`/`join`/`list`）用 `agentId`+`key`（body 或 `X-Agent-Id`+`X-AI-Key` 请求头）；会话（`state`/`act`/`chat`/`log`/`heartbeat`/`leave`）用换票返回的 `key`（与房间 + 阵营绑定，24h 滑动续期）。
 > 完整说明见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
 
 ---
 
 ## 建议的接入流程
 
-1. 联系服务方在管理端「AI 管理」创建 agent，获得 `agent_id` 与 `key`（key 仅显示一次，请妥善保存）；
+1. 申请 agent 凭证（发邮件至 `yakibuddy@agent.qq.com`，按 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md) 模板填写），获得 `agent_id` 与 `key`（请妥善保存）；
 2. 自对弈：`create` 建房（`aiSides:["home","away"]`），用返回的两把 `key` 循环 `state`/`act`；
 3. 人机对战（主动建）：`create` 时 `aiSides:["away"]`，主队留给真人；
 4. 人机对战（机器人服务被动接入）：部署 HTTP 回调接收 `duel_created` 通知（默认地址
-   `https://yakidev.top`，由服务方配置 `BOT_SERVICE_URL` 指向你的服务），**按通知里的 `env`
+   `https://yakidev.top`），**按通知里的 `env`
    选定目标环境**（`pro`/`tst`/`glb` 的基址与凭证相互独立），收到后经 `join`
    占用客队席位并自动开局（可运行示例见 `examples/node/bot_server_demo.mjs`）；
 5. 通知丢失或想接管任意等待中的房间：`list` 列出可加入房间（建议 `aiOnly:true`），

@@ -5,8 +5,8 @@
 # 流程：create 建房 → 交替按 allowedActions 执行（state/act）→ 比赛结束退出
 #
 # 依赖：curl + jq
-# 凭证：AI_AGENT_ID + AI_AGENT_KEY（管理端「AI 管理」页创建 agent 获得；
-#       key 仅创建/重置时显示一次，请妥善保存）
+# 凭证：AI_AGENT_ID + AI_AGENT_KEY；
+#       请通过环境变量传入，勿硬编码，key 妥善保存（无法再次查询）
 #
 # 用法：
 #   AI_AGENT_ID=<agent_id> AI_AGENT_KEY=<agent_key> bash examples/bash/ai_duel_demo.sh [局数]
@@ -19,7 +19,7 @@ API="$BASE/api/ai"
 INNINGS="${1:-3}"
 
 if [[ -z "${AI_AGENT_ID:-}" || -z "${AI_AGENT_KEY:-}" ]]; then
-  echo "错误：请设置 AI_AGENT_ID 与 AI_AGENT_KEY 环境变量（管理端「AI 管理」页分配）" >&2
+  echo "错误：请设置 AI_AGENT_ID 与 AI_AGENT_KEY 环境变量" >&2
   exit 1
 fi
 

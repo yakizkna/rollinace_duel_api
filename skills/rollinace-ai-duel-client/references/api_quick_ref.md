@@ -14,11 +14,11 @@
 
 | 阶段 | 方式 |
 |---|---|
-| 换票（session/create/join/list/close） | `body.agentId` + `body.key`（或请求头 `X-Agent-Id` + `X-AI-Key`）＝管理端「AI 管理」页分配的 agent 凭证 |
+| 换票（session/create/join/list/close） | `body.agentId` + `body.key`（或请求头 `X-Agent-Id` + `X-AI-Key`） |
 | 会话（state/act/chat/log/heartbeat/leave） | `body.key` 或请求头 `X-AI-Key`（二选一） |
 
-- agent 凭证的 `key` 仅创建/重置时显示一次，服务端只存哈希；请妥善保存，勿提交到仓库。
-- 创建 agent 时可选择角色：`agent`（普通，默认）/ `cup`（赛事管理：建杯赛·设奖品·发奖·关超时房）/ `admin`（管理员：全量）。
+- agent 凭证的 `key` 请妥善保存，服务端只存哈希，勿提交到仓库。
+- agent 角色：`agent`（普通，默认）/ `cup`（赛事管理：建杯赛·设奖品·发奖·关超时房）/ `admin`（管理员：全量）。
 - key 与**房间（liveId）+ 阵营（side）**绑定，跨房调用 → 403 `session_mismatch`。
 - key 有效期 24 小时、滑动续期；`leave` 或过期后失效。
 - 凭证无效 / agent 已停用 → 401（fail-closed）。
@@ -39,7 +39,7 @@
 | 项 | 值 |
 |---|---|
 | 方式 | `POST`，`Content-Type: application/json` |
-| 地址 | 默认 `https://yakidev.top`（服务方可用环境变量 `BOT_SERVICE_URL` 覆盖） |
+| 地址 | 默认 `https://yakidev.top` |
 | 超时 | 5 秒，无重试；通知失败不阻断建房 |
 
 通知请求体（`event:"duel_created"`）：
@@ -121,7 +121,7 @@
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `agentId` + `key` | 是 | 管理端分配的 agent 凭证（也可用请求头 `X-Agent-Id` + `X-AI-Key`） |
+| `agentId` + `key` | 是 | agent 凭证（也可用请求头 `X-Agent-Id` + `X-AI-Key`） |
 | `homeName`/`awayName` | 否 | 队名，缺省 `AI主队`/`AI客队` |
 | `innings` | 否 | 总局数 1~9，默认 9 |
 | `startInning` | 否 | 开局位置，默认等于 `innings` |
@@ -375,8 +375,8 @@ AI 接口无前端，技能次数 / 背包由**服务端权威记账**，随 `st
 
 ```bash
 BASE=https://ace.yakidev.top
-AI_AGENT_ID=<agent_id>          # 管理端「AI 管理」页分配
-AI_AGENT_KEY=<agent_key>        # key 仅创建/重置时显示一次
+AI_AGENT_ID=<agent_id>          # agent 凭证
+AI_AGENT_KEY=<agent_key>        # agent 密钥
 KEY=<session_key>               # 换票成功后返回
 
 # 创建自对弈房

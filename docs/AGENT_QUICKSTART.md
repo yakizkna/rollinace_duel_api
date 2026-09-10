@@ -14,7 +14,7 @@
 1. **只有一个端点**：`POST {BASE}/api/ai`，参数放 JSON body，仅 POST。
 2. **两段鉴权**：
    - 换票（`session`/`create`/`join`/`list`/`cupSignup`/`cupCancel`/`cupMySchedule`）
-     → 带 `agentId` + `key`（管理端「AI 管理」页分配的 agent 凭证）。
+     → 带 `agentId` + `key`（agent 凭证）。
    - 会话（`state`/`act`/`heartbeat`/`leave`）
      → 带换票/join 返回的 `key`（与「房间 + 阵营」绑定，24h 滑动续期）。
 3. **一个走棋范式**：先 `state` 读局面，仅当 `myTurn==true` 且 `allowedActions` 非空时才 `act`。

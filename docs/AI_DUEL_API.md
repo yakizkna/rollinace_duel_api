@@ -39,8 +39,7 @@
 | 身份参数 | 换票类接口（`session`/`create`/`join`）：`agentId` + `key`（body 或请求头 `X-Agent-Id` + `X-AI-Key`）；会话接口：`body.key` 或请求头 `X-AI-Key` |
 | 跨域 | 已开放 `Access-Control-Allow-*`；不强制 `X-Requested-With`（便于外部程序直连） |
 
-必需凭证：`agent_id` + `key`（由服务方在管理端「AI 管理」页创建 agent 分配；
-**key 仅创建/重置时显示一次**，服务端只存哈希，无法再查询；凭证无效或 agent 已停用 → 401 fail-closed）。
+必需凭证：`agent_id` + `key`（服务端只存哈希，无法再查询；凭证无效或 agent 已停用 → 401 fail-closed）。
 
 最小调用流程（AI vs AI 自对弈）：
 
@@ -74,7 +73,7 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 | 项 | 值 |
 |---|---|
 | 方式 | `POST`，`Content-Type: application/json` |
-| 地址 | 默认 `https://yakidev.top`；服务方可用环境变量 `BOT_SERVICE_URL` 覆盖 |
+| 地址 | 默认 `https://yakidev.top` |
 | 超时 | 5 秒，无重试 |
 
 请求体（`event:"duel_created"`）：
@@ -96,7 +95,7 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 机器人服务返回能否创建 AI 对战：
 
 ```json
-// 请求体（POST BOT_SERVICE_URL，与 duel_created 同一地址与 5s 超时）
+// 请求体（POST 回调地址，与 duel_created 同一地址与 5s 超时）
 { "event": "check", "env": "pro", "ts": 1756500000000 }
 
 // 期望响应（HTTP 200，JSON）
@@ -128,7 +127,7 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 服务端向机器人服务推送通知（与 `duel_created` 同一地址与 5s 超时；失败不阻断关房，只告警）：
 
 ```json
-// 请求体（POST BOT_SERVICE_URL）
+// 请求体（POST 回调地址）
 { "event": "room_closed", "env": "pro", "liveId": "ABCD1234",
   "type": "duel", "ai": true,
   "closedBy": "host",          // "host"（主播关播 stop）/ "player"（对战玩家主动退出 leave）
@@ -152,7 +151,7 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 
 | 值 | 含义 | 判定条件（服务端按部署环境自动给出，接入方无需配置） |
 |---|---|---|
-| `glb` | 国际版环境 | 国际版部署（服务方环境变量 `IS_GLB=1`）。国际版无测试环境，故优先级最高 |
+| `glb` | 国际版环境 | 国际版部署（环境变量 `IS_GLB=1`）。国际版无测试环境，故优先级最高 |
 | `tst` | 测试环境 | 非国际版且测试部署（`IS_DEV=1`） |
 | `pro` | 正式环境 | 其余（正式部署） |
 
@@ -209,10 +208,10 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 ### 0.7 玩家报名杯赛回调（event:"tour_signup"）
 
 真人玩家在官网「杯」（/tour）页面点击报名当前杯赛时，服务端**登记 uid 后**回调机器人平台
-（同一 `BOT_SERVICE_URL` 通道，5s 超时；通知失败**不阻断报名**）：
+（同一回调地址通道，5s 超时；通知失败**不阻断报名**）：
 
 ```json
-// POST BOT_SERVICE_URL，Content-Type: application/json
+// POST 回调地址，Content-Type: application/json
 {
   "event": "tour_signup",
   "env": "pro",                        // 来源环境（pro / tst / glb），与 0.5 相同语义
@@ -237,7 +236,7 @@ AI 平台收到后应自行决定如何给该玩家分配场次：
 
 | 阶段 | 说明 |
 |---|---|
-| 凭证 | 服务方在管理端「AI 管理」页创建 agent，获得 `agent_id` 与 `key`（key 仅显示一次，请妥善保存；服务端只存哈希）。创建时可选择**角色**：`agent`（普通，默认）/ `cup`（赛事管理：建大会·排阵·发奖·关超时房）/ `admin`（管理员，含 cup 全部能力，可调 `close` 关闭任意对战房间） |
+| 凭证 | `agent_id` 与 `key`（服务端只存哈希）。agent 角色：`agent`（普通，默认）/ `cup`（赛事管理：建大会·排阵·发奖·关超时房）/ `admin`（管理员，含 cup 全部能力，可调 `close` 关闭任意对战房间） |
 | 换票 | `session` / `create` / `join` / `list` / `close` 接口带 `agentId` + `key`（两字段任选 body 或请求头）。凭证无效 / 已被停用 → 401 `unauthorized` |
 | 会话 | 换票成功后返回 `key`（session_key）。后续 `state` / `act` / `heartbeat` / `leave` 带该 key |
 | 绑定 | key 与 **房间（liveId）+ 阵营（side：home/away）** 绑定，天然隔离：跨房调用 → 403 `session_mismatch` |
@@ -245,7 +244,7 @@ AI 平台收到后应自行决定如何给该玩家分配场次：
 
 AI 身份为 `ai:{8位随机}` 形式的 uid，直接进入房间的 `homeUid/awayUid/attackerUid/viewers` 体系，
 与真人端共用同一套状态机、广播链路与关闭回收逻辑。
-会话与房间记录中带有 `agentId`，服务方可据此审计每个 agent 的建/入房与执棋行为。
+会话与房间记录中带有 `agentId`，可据此区分不同 agent 的建/入房与执棋行为。
 
 失败码：
 
@@ -256,16 +255,16 @@ AI 身份为 `ai:{8位随机}` 形式的 uid，直接进入房间的 `homeUid/aw
 
 ### 1.1 agent 名称规则（注册时确定，参赛时须一致）【2026-09-10 起】
 
-名称在服务方管理端「AI 管理」创建 agent 时确定（**暂无改名接口**，只能删除重建），并须满足：
+agent 名称在注册时确定（**暂无改名接口**，只能删除重建），并须满足：
 
 | 约束 | 规则 |
 |---|---|
 | 字符集 | 仅允许**汉字**与**英文字母 a-zA-Z**（数字、空格、符号、emoji 均不允许） |
 | 长度 | 宽度上限 **8**，计法：**1 个汉字 = 2 个字母** → 最多 4 个汉字 / 最多 8 个字母 / 二者混合（如「棒球HY」= 2+2+1+1 = 6） |
 | 唯一性 | 不可与已注册 agent 重名（不区分大小写；已删除 agent 的名称可复用） |
-| 内容 | 走**敏感词过滤**（与弹幕同一套词表，管理端维护） |
+| 内容 | 走**敏感词过滤**（与弹幕同一套词表） |
 
-注册时不符合上述任一条会被管理端拒绝（`invalid_name` / `name_taken` / `sensitive_name`，均为管理端接口错误码，非 `/api/ai` 错误码）。
+注册时不符合上述任一条会被拒绝（`invalid_name` / `name_taken` / `sensitive_name`，均为接口错误码，非 `/api/ai` 错误码）。
 
 **参赛时名称必须与注册名一致**：
 
@@ -338,8 +337,6 @@ roll1 ──掷骰──▶ [1B/?] ──▶ choose ──take1B──┐
 | `reward` | agentId + key（**`role:"cup"`/`admin`**） | 赛后给真人胜者发放奖品技能包（增量、封顶、幂等） |
 | `cupSignupRemove` | agentId + key（**`role:"cup"`/`admin`**） | 从大会报名表移除某真人报名（`uid`）；幂等（不在表也 ok）；配合真人端「已报名」状态撤销与平台本地名单同步删除，避免被报名期远端同步重新加回 |
 
-> 服务方按 agent + 接口记录调用量，可在管理端「AI 管理」页查看各 agent 的分接口调用量与最近活跃时间。
-
 ---
 
 ## 四、接口明细
@@ -373,7 +370,7 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `agentId` + `key` | 是 | 管理端分配的 agent 凭证（也可用请求头 `X-Agent-Id` + `X-AI-Key`） |
+| `agentId` + `key` | 是 | agent 凭证（也可用请求头 `X-Agent-Id` + `X-AI-Key`） |
 | `homeName` / `awayName` | 否 | 队名（缺省 `AI主队` / `AI客队`） |
 | `innings` | 否 | 总局数 1~9，默认 9 |
 | `startInning` | 否 | 开局位置，默认等于 `innings` |
@@ -447,7 +444,7 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 | 字段 | 必填 | 默认 | 说明 |
 |---|---|---|---|
-| `agentId` + `key` | 是 | — | 管理端分配的 agent 凭证 |
+| `agentId` + `key` | 是 | — | agent 凭证 |
 | `aiOnly` | 否 | `false` | `true` 只返回 AI 房（`ai:true`）；`false` 时普通对战房同样返回（AI 可「假装玩家」加入真人等待中的房间） |
 | `joinable` | 否 | `true` | `false` 返回全部对战房（含满席 / 进行中 / 已结束，`joinable` 为 `false`） |
 | `limit` | 否 | `50` | 返回条数上限，最大 `200`；按创建时间倒序（新房在前） |
@@ -752,9 +749,9 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 | 字段 | 必填 | 默认 | 说明 |
 |---|---|---|---|
-| `agentId` + `key` | 是 | — | 管理端分配的**管理员** agent 凭证（创建 agent 时角色选「管理员」） |
+| `agentId` + `key` | 是 | — | **管理员**（`role:"admin"`）agent 凭证（需角色为 admin） |
 | `liveId` | 是 | — | 要关闭的对战房间号 |
-| `reason` | 否 | `bot_close` | 关闭原因（最长 32 字符），用于服务方管理端审计 |
+| `reason` | 否 | `bot_close` | 关闭原因（最长 32 字符） |
 
 成功响应：
 
@@ -778,8 +775,8 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 | `message` | 见下 | 用户可读文案，应优先展示它 |
 
 **`reason` 的语义区分**：成功响应的 `reason` 是调用方传入的关闭原因（默认 `bot_close`，≤32 字符，
-服务方审计用）；**调用失败时**响应为 `{ "ok":false, "reason":"<错误码>", ... }`，此时 `reason` 是固定错误码：
-- `admin_only`（HTTP 403）：非管理员 agent 调用（创建 agent 时角色不是「管理员」）；
+用于记录）；**调用失败时**响应为 `{ "ok":false, "reason":"<错误码>", ... }`，此时 `reason` 是固定错误码：
+- `admin_only`（HTTP 403）：非管理员 agent 调用（agent 角色不是 `admin`）；
 - `room_not_found`：房间不存在；
 - `not_duel`：不是对战房。
 （与成功响应的 `reason` 语义不同：成功=审计用的关闭原因，失败=错误码。）
@@ -909,7 +906,7 @@ AI 平台自行判定；对仍在推进的对局默认有活跃保护，确需�
 
 第三方 AI 只需注册 agent 即可**像真人一样自助报名大会**，与真人共享同一报名期与 8 席名额（先到先得），比赛时加入自己的场次房对打。**不需要回调地址**（全程由你主动轮询）。
 
-前提：大会主办方开启了「允许第三方 AI 报名」（`allowExternalAi`，管理端大会设置可配）。
+前提：大会主办方开启了「允许第三方 AI 报名」（`allowExternalAi`，大会设置可配）。
 
 **参赛生命周期：**
 
@@ -1071,9 +1068,9 @@ AI 的每一步都会作为一帧广播，页面无需改造。
 ## 九、内容与安全说明
 
 - 本页为**公开契约**，只包含公开接口定义与数据格式，**不包含**任何内部路径、源站地址或密钥。
-- agent 凭证（`agent_id` + `key`）由服务方在管理端分配；`key` 仅创建/重置时显示一次，请妥善保管，
-  **禁止硬编码进前端或提交到代码仓库**；泄露请立即联系服务方在管理端重置。
-- agent **名称**在管理端注册时须符合「1.1 agent 名称规则」（仅汉字/字母、宽度 ≤8、不重名、过敏感词）；
+- agent 凭证（`agent_id` + `key`）；`key` 请妥善保管，
+  **禁止硬编码进前端或提交到代码仓库**；泄露请立即重新申请凭证。
+- agent **名称**注册时须符合「1.1 agent 名称规则」（仅汉字/字母、宽度 ≤8、不重名、过敏感词）；
   参赛时 `cupSignup` / `join` 传入的 `name` 必须与注册名一致，否则 `400 name_mismatch`。
 - 完整错误码与 `allowedActions` 速查见 `skills/rollinace-ai-duel-client/references/api_quick_ref.md`；
   多语言示例见 `docs/USAGE_EXAMPLES.md` 与 `examples/`。

@@ -3,8 +3,7 @@
 本节覆盖「AI 对战接口」`POST /api/ai` 的接入示例（创建 AI 自对弈房 → 按 `allowedActions` 循环决策 → 比赛结束）。
 接口完整说明见 [AI_DUEL_API.md](AI_DUEL_API.md)。
 
-> agent 凭证（`agent_id` + `key`）由服务方在管理端「AI 管理」页创建分配（key 仅创建/重置时显示一次），
-> 请通过环境变量传入，勿硬编码。
+> agent 凭证（`agent_id` + `key`）请通过环境变量传入，勿硬编码；key 请妥善保存（无法再次查询）。
 > 可运行脚本：`examples/bash/ai_duel_demo.sh`（bash 自对弈示例）、
 > `examples/node/bot_server_demo.mjs`（机器人服务示例：收 `duel_created` 通知 → join → 走棋）。
 
@@ -12,8 +11,8 @@
 
 ```bash
 BASE=https://ace.yakidev.top
-AI_AGENT_ID=<agent_id>          # agent 凭证（管理端「AI 管理」页分配）
-AI_AGENT_KEY=<agent_key>        # agent 密钥（key 仅创建/重置时显示一次）
+AI_AGENT_ID=<agent_id>          # agent 凭证
+AI_AGENT_KEY=<agent_key>        # agent 密钥
 
 # 1) 创建 AI 自对弈房（3 局制，缩短验证）
 ROOM=$(curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
@@ -40,8 +39,8 @@ import urllib.request
 
 BASE = "https://ace.yakidev.top"
 API = f"{BASE}/api/ai"
-AI_AGENT_ID = "<agent_id>"   # 管理端「AI 管理」页分配
-AI_AGENT_KEY = "<agent_key>" # key 仅创建/重置时显示一次，建议从环境变量读取
+AI_AGENT_ID = "<agent_id>"   # agent 凭证
+AI_AGENT_KEY = "<agent_key>" # agent 密钥，建议从环境变量读取
 
 def post(payload: dict) -> dict:
     req = urllib.request.Request(
@@ -80,8 +79,8 @@ print("比赛结束")
 ```js
 const BASE = "https://ace.yakidev.top";
 const API = `${BASE}/api/ai`;
-const AI_AGENT_ID = process.env.AI_AGENT_ID;   // 管理端「AI 管理」页分配
-const AI_AGENT_KEY = process.env.AI_AGENT_KEY; // key 仅创建/重置时显示一次，勿硬编码
+const AI_AGENT_ID = process.env.AI_AGENT_ID;   // agent 凭证
+const AI_AGENT_KEY = process.env.AI_AGENT_KEY; // agent 密钥，勿硬编码
 
 const post = (payload) =>
   fetch(API, {
@@ -118,7 +117,7 @@ main();
 
 ## 8. Node.js — 机器人服务（人机对战）
 
-机器人服务需处理三类服务端回调（同一地址 `BOT_SERVICE_URL`，默认 `https://yakidev.top`）：
+机器人服务需处理三类服务端回调（默认回调地址 `https://yakidev.top`）：
 - **`check`（能力查询）**：真人端勾选「AI 对战」开关时发起，返回 `{ canCreate, reason?, message? }`
   （`reason` 机器码；`message` 可选，为展示给玩家的友好文案，建议 64 字以内、不带内部细节）；
   返回不可用 / 超时 / 非 2xx 时前端提示「暂时无法 AI 对战」并回滚勾选（fail-closed）。
@@ -182,7 +181,7 @@ http.createServer(async (req, res) => {
 AI_AGENT_ID=<agent_id> AI_AGENT_KEY=<agent_key> PORT=8080 node examples/node/bot_server_demo.mjs
 ```
 
-将本服务公网地址提供给服务方，配置为 `BOT_SERVICE_URL`（默认 `https://yakidev.top`）。
+将本服务公网地址作为通知地址（默认 `https://yakidev.top`）。
 回调契约为 `POST` + `Content-Type: application/json`，5 秒超时、无重试；回调失败不阻断建房，
 机器人服务可用 `action:"list"` 主动轮询兜底（见第 9 节）。
 
@@ -190,8 +189,8 @@ AI_AGENT_ID=<agent_id> AI_AGENT_KEY=<agent_key> PORT=8080 node examples/node/bot
 
 ```bash
 BASE=https://ace.yakidev.top
-AI_AGENT_ID=<agent_id>          # 管理端「AI 管理」页分配
-AI_AGENT_KEY=<agent_key>        # key 仅创建/重置时显示一次
+AI_AGENT_ID=<agent_id>          # agent 凭证
+AI_AGENT_KEY=<agent_key>        # agent 密钥
 KEY=<session_key>               # 换票 / join 后返回
 
 # 列出可加入的对战房（aiOnly:true 只看 AI 房；默认只返回 joinable 的房间）
@@ -255,7 +254,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 Node.js（巡检示例：每 60s 关闭超过 10 分钟无行为的 AI 对战房）：
 
 ```js
-// 需要管理端创建 role:"admin" 的管理员 agent
+// 该巡检示例需要 role:"admin" 的管理员 agent
 setInterval(async () => {
   const rooms = await post({ action: "list", agentId: AI_ADMIN_ID, key: AI_ADMIN_KEY, joinable: false });
   for (const r of rooms.rooms) {
@@ -277,7 +276,7 @@ setInterval(async () => {
 
 ```bash
 BASE=https://ace.yakidev.top
-CUP_ID=<cup_agent_id>       # 管理端「AI 管理」创建角色为「赛事管理 cup」的 agent
+CUP_ID=<cup_agent_id>       # 角色为「赛事管理 cup」的 agent
 CUP_KEY=<cup_agent_key>
 
 # 1) 建杯（全局同一时间一个；已有未结束杯返回 409 cup_active）

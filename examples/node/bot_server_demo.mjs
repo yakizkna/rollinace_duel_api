@@ -28,7 +28,7 @@
 //   AI_ADMIN_ID / AI_ADMIN_KEY                       管理员 agent 凭证（创建时角色选「管理员」，
 //   用于 close 关闭超时房间；未配置则跳过 close 巡检）
 //
-// 通知地址：默认 https://yakidev.top（服务方通过 BOT_SERVICE_URL 环境变量指向
+// 通知地址：默认 https://yakidev.top（如需自定义通知地址，由部署方配置）
 // 本服务的公网地址；本示例只实现「收到通知 → join → 走棋」，无鉴权、无重试队列，
 // 生产环境请按需补充。
 // ============================================================================
@@ -43,7 +43,7 @@ const ADMIN_ID = process.env.AI_ADMIN_ID;   // 管理员 agent（角色「管理
 const ADMIN_KEY = process.env.AI_ADMIN_KEY;
 
 if (!AGENT_ID || !AGENT_KEY) {
-  console.error("错误：请设置 AI_AGENT_ID 与 AI_AGENT_KEY（管理端「AI 管理」页分配）");
+  console.error("错误：请设置 AI_AGENT_ID 与 AI_AGENT_KEY 环境变量");
   process.exit(1);
 }
 
@@ -245,7 +245,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`机器人服务已启动：监听 POST /，端口 ${PORT}`);
   console.log(`接口基址：${BASE}/api/ai；agent: ${AGENT_ID}`);
-  console.log(`请将本服务公网地址告知服务方配置为 BOT_SERVICE_URL（默认 https://yakidev.top）`);
+  console.log(`请将本服务公网地址配置为通知地址（默认 https://yakidev.top）`);
   // 管理员 close 巡检：配了 AI_ADMIN_ID/KEY 时每 60s 关一轮超时房间
   if (ADMIN_ID && ADMIN_KEY) {
     closeStaleRooms().catch((e) => console.error("[close] 巡检异常:", (e && e.message) || e));

@@ -1,8 +1,8 @@
 # Agent Key 申请邮件模板
 
-接入 Rollin Ace AI 对战接口，需要先拿到 `agentId` + `key` 凭证（由服务方在管理端「AI 管理」创建分配）。
+接入 Rollin Ace AI 对战接口，需要先拿到 `agentId` + `key` 凭证（发邮件至 `yakibuddy@agent.qq.com` 申请）。
 
-**申请方式**：发邮件至 **`yakibuddy@agent.qq.com`**，按下方模板填写。审核通过后，服务方会回复你的 `agentId` 与 `key`（`key` 仅显示一次，请妥善保存，勿硬编码进代码 / 提交仓库）。
+**申请方式**：发邮件至 **`yakibuddy@agent.qq.com`**，按下方模板填写。审核通过后，会回复你的 `agentId` 与 `key`（请妥善保存，勿硬编码进代码 / 提交仓库）。
 
 ---
 
@@ -36,7 +36,7 @@
 
 ## Agent Key 使用方法
 
-`key` 仅创建 / 重置时显示一次，服务端只存哈希、无法再查询，请妥善保存。下面以 `create` 建房为例，展示 `agentId` + `key` 在请求中的两种用法（任选其一）：
+`key` 请妥善保存，服务端只存哈希、无法再查询。下面以 `create` 建房为例，展示 `agentId` + `key` 在请求中的两种用法（任选其一）：
 
 **方式一：放在 JSON body**（推荐）
 

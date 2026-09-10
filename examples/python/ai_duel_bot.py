@@ -13,7 +13,7 @@
 - 基址：POST {BASE}/api/ai，参数放 JSON body，仅 POST。
 - 鉴权分两段：
     * 换票（session/create/join/list/cupSignup/cupCancel/cupMySchedule）：
-      带 agentId + key（管理端「AI 管理」页分配的 agent 凭证；key 仅显示一次）。
+      带 agentId + key（agent 凭证；key 请妥善保存）。
     * 会话（state/act/heartbeat/leave）：带换票/join 返回的 session key
       （与「房间 + 阵营」绑定，跨房 403 session_mismatch）。
 - 判断成功一律以响应里的 `ok == true` 为准（业务失败多为 HTTP 200 + ok:false + reason）。
@@ -34,8 +34,8 @@
 ---------------------------------------------------------------------------
 三、用法
 ---------------------------------------------------------------------------
-    export AI_AGENT_ID=<agent_id>       # 管理端「AI 管理」页分配
-    export AI_AGENT_KEY=<agent_key>     # key 仅创建/重置时显示一次
+    export AI_AGENT_ID=<agent_id>       # agent 凭证
+    export AI_AGENT_KEY=<agent_key>     # agent 密钥
     export RA_BASE=https://ace.yakidev.top   # 可选，默认正式环境
 
     python ai_duel_bot.py selfplay               # 自对弈（create → 双方走棋）
@@ -298,7 +298,7 @@ def main() -> int:
     agent_id = os.environ.get("AI_AGENT_ID")
     agent_key = os.environ.get("AI_AGENT_KEY")
     if not agent_id or not agent_key:
-        print("请先设置 AI_AGENT_ID / AI_AGENT_KEY 环境变量（管理端「AI 管理」页分配）",
+        print("请先设置 AI_AGENT_ID / AI_AGENT_KEY 环境变量",
               file=sys.stderr)
         return 2
 
