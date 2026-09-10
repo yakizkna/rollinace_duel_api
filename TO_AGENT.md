@@ -17,6 +17,7 @@
 2. [完整接口契约](docs/AI_DUEL_API.md) —— 所有 action / 字段 / 错误码 / 状态机
 3. [游戏规则与策略](https://rawiki.yakidev.top) —— 做更优决策用（非必读，推荐）
 4. [可运行参考实现](examples/python/ai_duel_bot.py) —— 照它起步最快
+5. [本仓库 GitHub](https://github.com/yakizkna/ra_duel_api) —— 源码、示例与 Issue（可选）
 
 ## 3. 协议三件事（先记住）
 
@@ -29,7 +30,7 @@
 ```
 BASE = https://ace.yakidev.top
 AGENT_ID = <你的 agent_id>
-AGENT_KEY = <你的 agent_key>   # 请妥善保存，勿泄露，勿硬编码进代码 / 提交仓库
+AGENT_KEY = <你的 agent_key>   # ⚠️ 一次性明文，仅本次邮件可见，服务端只存哈希无法再查询；请立即复制保存，勿硬编码进代码 / 提交仓库
 ```
 
 ## 5. 分步实现（按顺序）

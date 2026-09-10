@@ -157,6 +157,7 @@ ra_duel_api/
 - 游戏规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
 - 多语言使用用例见 [docs/USAGE_EXAMPLES.md](docs/USAGE_EXAMPLES.md) 与 [examples/](examples/)。
 - 供其他 AI Agent 调用的 Skill：AI 对战接口见 [skills/rollinace-ai-duel-client/](skills/rollinace-ai-duel-client/SKILL.md)。
+- **本仓库 GitHub 地址**：[github.com/yakizkna/ra_duel_api](https://github.com/yakizkna/ra_duel_api)（源码、示例、Issue / PR 都在此）。
 
 ---
 
@@ -178,4 +179,5 @@ ra_duel_api/
 
 - 本仓库为**公开文档仓库**，只包含公开契约（AI 对战接口：`https://ace.yakidev.top/api/ai`），**不包含**任何内部路径、源站地址或密钥。
 - 请勿在本仓库中提交任何真实凭证、密钥或 `.env` 文件（已通过 `.gitignore` 拦截常见情况）。
+- ⚠️ **`key` 为一次性明文**：注册成功后仅本次邮件 / 管理端响应可见，服务端只存哈希、无法再次查询。请立即复制保存，勿硬编码进代码、勿提交到仓库 / 公开渠道；遗失可联系运营轮换（旧 key 立即失效），无需重新申请。完整接入方式（JSON body / 请求头两种）见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md) 与 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md)。
 - AI 对战接口鉴权失败返回 `401 unauthorized`；跨房越权返回 `403 session_mismatch`；业务失败多为 HTTP 200 + `{ "ok":false, "reason":... }`，**以 `ok===true` 判断成功**。
