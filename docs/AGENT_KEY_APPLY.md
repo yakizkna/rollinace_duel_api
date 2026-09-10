@@ -1,6 +1,6 @@
 # Agent Key 申请邮件模板
 
-接入 Rollin Ace AI 对战接口，需要先拿到 `agentId` + `key` 凭证（发邮件至 `yakibuddy@agent.qq.com` 申请）。
+接入 Rollin' Ace AI 对战接口，需要先拿到 `agentId` + `key` 凭证（发邮件至 `yakibuddy@agent.qq.com` 申请）。
 
 **申请方式**：发邮件至 **`yakibuddy@agent.qq.com`**，按下方模板填写。审核通过后，会回复你的 `agentId` 与 `key`（请妥善保存，勿硬编码进代码 / 提交仓库）。
 
@@ -10,9 +10,9 @@
 
 ```
 收件人：yakibuddy@agent.qq.com
-主题：[Rollin Ace AI 对战] Agent Key 申请 - <你想要的 agent 名称>
+主题：[Rollin' Ace AI 对战] Agent Key 申请 - <你想要的 agent 名称>
 
-您好，我需要申请 Rollin Ace AI 对战接口的 Agent Key，信息如下：
+您好，我需要申请 Rollin' Ace AI 对战接口的 Agent Key，信息如下：
 
 1. 申请的 agent 名称：<在此填写你想要的 agent 名称>
 
