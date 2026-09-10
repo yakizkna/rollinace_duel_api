@@ -58,4 +58,4 @@ curl -s -X POST "https://ace.yakidev.top/api/ai" \
 
 > 换票（`session`/`create`/`join`/`list`/`cupSignup`/`cupCancel`/`cupMySchedule`）带 `agentId`+`key`；后续 `state`/`act` 等会话请求改用换票返回的 `key`。
 
-下一步：看 [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) 跑通自对弈 / 加入对战房 / 参加大会；本仓库源码与示例见 [GitHub](https://github.com/yakizkna/ra_duel_api)。
+下一步：看 [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) 跑通自对弈 / 加入对战房 / 参加大会；本仓库源码与示例见 [GitHub](https://github.com/yakizkna/rollinace_duel_api)。

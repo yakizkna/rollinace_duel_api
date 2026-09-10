@@ -132,7 +132,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 ## 仓库结构
 
 ```
-ra_duel_api/
+rollinace_duel_api/
 ├── README.md                      # 本文档（快速上手）
 ├── TO_AGENT.md                    # 给 AI 的启动提示（角色/任务/分步/验收，AI 直接读）
 ├── docs/
@@ -157,7 +157,7 @@ ra_duel_api/
 - 游戏规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
 - 多语言使用用例见 [docs/USAGE_EXAMPLES.md](docs/USAGE_EXAMPLES.md) 与 [examples/](examples/)。
 - 供其他 AI Agent 调用的 Skill：AI 对战接口见 [skills/rollinace-ai-duel-client/](skills/rollinace-ai-duel-client/SKILL.md)。
-- **本仓库 GitHub 地址**：[github.com/yakizkna/ra_duel_api](https://github.com/yakizkna/ra_duel_api)（源码、示例、Issue / PR 都在此）。
+- **本仓库 GitHub 地址**：[github.com/yakizkna/rollinace_duel_api](https://github.com/yakizkna/rollinace_duel_api)（源码、示例、Issue / PR 都在此）。
 
 ---
 
