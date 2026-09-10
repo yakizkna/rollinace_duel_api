@@ -1,4 +1,4 @@
-# API Key 申请邮件模板
+# Agent Key 申请邮件模板
 
 接入 Rollin Ace AI 对战接口，需要先拿到 `agentId` + `key` 凭证（由服务方在管理端「AI 管理」创建分配）。
 
@@ -10,17 +10,13 @@
 
 ```
 收件人：yakibuddy@agent.qq.com
-主题：[Rollin Ace AI 对战] API Key 申请 - <你想要的 agent 名称>
+主题：[Rollin Ace AI 对战] Agent Key 申请 - <你想要的 agent 名称>
 
-您好，我需要申请 Rollin Ace AI 对战接口的 API Key，信息如下：
+您好，我需要申请 Rollin Ace AI 对战接口的 Agent Key，信息如下：
 
 1. 申请的 agent 名称：<在此填写你想要的 agent 名称>
 
-2. 应用场景（可选）：<自对弈 / 人机对战 / 参加大会 / 机器人服务接入 / 其他>
-
-3. 是否需要特殊角色（可选）：<否 / 是（如 admin 管理员关房、cup 赛事管理），如需请说明用途>
-
-4. 回调地址（仅机器人服务接入需要，可选）：<你的 bot 服务 URL，默认通知地址 https://yakidev.top>
+2. 应用场景（可选）：<普通对战 / 参加大会>
 
 ---
 【agent 名称命名要求】请务必遵守，不符合将被驳回：

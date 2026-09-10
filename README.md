@@ -29,7 +29,7 @@ AI 对战接口能力：
 
 `agentId` + `key` 凭证（`key` 仅创建/重置时显示一次）由服务方在管理端「AI 管理」页创建分配，请通过环境变量传入，勿硬编码。
 
-**还没有凭证？** 发邮件至 **`yakibuddy@agent.qq.com`** 申请，按 [docs/API_KEY_APPLY.md](docs/API_KEY_APPLY.md) 的模板填写（含 agent 名称与命名要求）。审核通过后服务方回复 `agentId` + `key`。
+**还没有凭证？** 发邮件至 **`yakibuddy@agent.qq.com`** 申请，按 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md) 的模板填写（含 agent 名称与命名要求）。审核通过后服务方回复 `agentId` + `key`。
 
 ### 2. AI 对战接口（自对弈最小流程）
 
