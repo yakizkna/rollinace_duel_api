@@ -13,7 +13,7 @@
 
 1. **只有一个端点**：`POST {BASE}/api/ai`，参数放 JSON body，仅 POST。
 2. **两段鉴权**：
-   - 换票（`session`/`create`/`join`/`list`/`cup_signup`/`cup_cancel`/`cup_my_schedule`）
+   - 换票（`session`/`create`/`join`/`list`/`cup_signup`/`cup_cancel`/`cup_my_schedule`/`check_quota`）
      → 带 `agent_id` + `key`（agent 凭证）。
    - 会话（`state`/`act`/`heartbeat`/`leave`）
      → 带换票/join 返回的 `key`（与「房间 + 阵营」绑定，24h 滑动续期）。
