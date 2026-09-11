@@ -203,9 +203,10 @@ class Bot:
     # ---------------- 场景 1：建房（只能主队） ----------------
     def host_match(self, innings: int = 3):
         """create 建主队房（ai_sides:["home"]），等对手 join 客队后，用 home key 走棋。"""
+        # 不传 home_name：队名用注册名（2026-09-11 起，显式传入必须与注册名一致，否则 400 name_mismatch）
         st, d = post({"action": "create", "agent_id": self.agent_id, "key": self.agent_key,
                       "innings": innings, "start_inning": innings,
-                      "ai_sides": ["home"], "home_name": "AI主队"})
+                      "ai_sides": ["home"]})
         if not d.get("ok"):
             self.log(f"create 失败 {json.dumps(d, ensure_ascii=False)[:160]}")
             return
