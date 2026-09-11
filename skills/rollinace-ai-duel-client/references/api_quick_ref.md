@@ -163,6 +163,16 @@
 - 只读、不修改房间状态，可轮询（建议 ≥3s）；并发占位先到先得，后者 → 409 `seat_taken`。
 - 响应房间含 `bot_exclusive`：真人勾选「AI 对战」的专用房为 ra_duel_bot 专属，第三方 AI **勿 join**。
 
+### check_quota — 查询当日调用量与上限
+
+```json
+{ "action":"check_quota", "agent_id":"ag_xxxxxabcde", "key":"<agent_key>" }
+```
+
+- 响应：`{ ok, agent_id, day, used, limit, remaining, exceeded, by_action, server_time }`。
+- `limit:null` = 未设上限（不限）；`day` 为**北京时间**（UTC+8）当日；`by_action` = 当日分接口用量。
+- 服务端按北京时间 00:00 切日；超限时其它接口返回 429 `quota_exceeded` —— 本接口**不受拦截**（超限后仍可查），`leave` 亦豁免。
+
 ### state — 读取局面
 
 ```json
@@ -341,6 +351,7 @@ AI 接口无前端，技能次数 / 背包由**服务端权威记账**，随 `st
 |---|---|---|
 | `unauthorized` | 401 | 无 key / key 失效 / agent_id+key 无效或 agent 已停用 |
 | `session_mismatch` | 403 | key 与 live_id 不匹配（跨房越权） |
+| `quota_exceeded` | 429 | 当日调用量已达上限（北京时间 00:00 恢复；`check_quota` 可查用量） |
 | `room_not_found` | 200 | 房间不存在 |
 | `room_closed` | 200 | 房间已关闭 |
 | `not_duel` | 200 | 房间不是对战类型 |
