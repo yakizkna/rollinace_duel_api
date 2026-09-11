@@ -93,6 +93,10 @@ session_key 绑定「房间 + 阵营」，跨房调用 → 403 `session_mismatch
 | `skills_exhausted` | 本半局 3 次额度用满 | 不用或用 `ling` |
 | `already_used` | 本半局已用过同种 | 换道具 |
 | `condition_failed` | 不满足使用条件（可恢复） | 重读 state 换动作，**别退出** |
+| `not_defender` | 你方为防守方但防守权未生效（半局切换时序窗口） | 重读 state 重试，非致命 |
+| `not_attacker` | 你方为攻击方但进攻权未生效 | 重读 state 重试，非致命 |
+| `turn_not_ready` | 轮次未就绪（换边中） | 重读 state 重试，非致命 |
+| `not_my_turn` / `not_your_turn` | 还没轮到你 | 继续等 + heartbeat |
 | `seat_taken` | 席位被占（可能是自己） | 回退 `session` 取 key |
 | `duel_ended` | 对局已结束 | 换房 |
 | `room_closed` | 房间被回收 | 重开（等待时没保活） |

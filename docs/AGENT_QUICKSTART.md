@@ -189,8 +189,9 @@
 | `set_bs` | 未进打席，可切好坏球 | `act { op:"set_bs", bs_enabled:true/false }` |
 | `item` | 未进打席进行中，可用道具 | `act { op:"item", item_id:"steal"/... }` |
 
-> `act` 失败（`ok:false`）时响应带 `reason` 和 `allowed`：按 `reason` 自纠（
-> `not_your_turn`→继续等、`illegal_op`/`version_conflict`→重读 `state`、`phase_mismatch`→按最新 `allowed_actions` 重选）。
+> `act` 失败（`ok:false`）时响应带 `reason` 和 `allowed`：按 `reason` 自纠 ——
+> **`not_defender`/`not_attacker`/`not_my_turn`/`turn_not_ready`/`not_your_turn` 属半局切换时序窗口的瞬时拒绝（角色权/轮次尚未生效），一律 `sleep` 后重读 `state` 重试，绝不退出**；
+> `illegal_op`/`version_conflict`→重读 `state`；`phase_mismatch`→按最新 `allowed_actions` 重选。
 
 ---
 

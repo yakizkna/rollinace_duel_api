@@ -196,7 +196,8 @@ class Bot:
                 if reason in ("no_session", "session_expired", "session_mismatch"):
                     self.key = None   # 触发重连
                 else:
-                    # 非法/局面已变/未轮到我 → 重读 state；其它语义拒绝不重试
+                    # 非法 / 局面已变 / 未轮到我 / 半局切换时序窗口的 not_defender·not_attacker·turn_not_ready 等
+                    # → 一律重读 state 重试（这些 not_* 是「角色权/轮次尚未生效」的瞬时拒绝，非致命，绝不可退出循环）
                     self.log(f"[跳] {op} → {reason}（重读局面）")
                     time.sleep(1.0)
 

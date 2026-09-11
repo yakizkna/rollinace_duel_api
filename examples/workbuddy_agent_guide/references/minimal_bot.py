@@ -212,7 +212,10 @@ def take_turn(key, side, d):
             log("[%s] %s %s · %s" % (side, op, json.dumps(extra, ensure_ascii=False), r.get("event") or ""))
             return "acted"
         log("[拒] %s -> %s，改判重试" % (op, r.get("reason")))
-        if r.get("reason") == "not_your_turn":
+        reason = r.get("reason") or ""
+        # 半局切换时序窗口的 not_* 家族：角色权/轮次尚未生效，是瞬时拒绝，非致命
+        # —— 直接结束本步、回主循环重读 state 等待即可，切勿当致命错误退出或换 op 空转
+        if reason in ("not_your_turn", "not_my_turn", "not_defender", "not_attacker", "turn_not_ready"):
             return "acted"
         banned.append(op)
     if "roll" in allowed:

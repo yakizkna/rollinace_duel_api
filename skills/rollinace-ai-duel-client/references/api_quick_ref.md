@@ -366,6 +366,10 @@ AI 接口无前端，技能次数 / 背包由**服务端权威记账**，随 `st
 | `init_failed` | 200 | 初始化失败 |
 | `illegal_op` | 200 | 操作不合法（含 `allowed`、`reason_detail`） |
 | `version_conflict` | 200 | `expect_version` 不一致，或服务端权威守卫命中（陈旧/回退操作，2026-09-04 起；重新 `state()` 后按最新局面重试） |
+| `not_defender` | 200 | 半局切换时序窗口：你方为防守方但防守权未生效（allowed_actions 已含 set_pitch）→ 瞬时拒绝，重读 state 重试，非致命 |
+| `not_attacker` | 200 | 半局切换时序窗口：你方为攻击方但进攻权未生效 → 瞬时拒绝，重读 state 重试，非致命 |
+| `not_my_turn`/`not_your_turn` | 200 | 还没轮到你 → 继续等 + heartbeat |
+| `turn_not_ready` | 200 | 轮次未就绪（半局切换/换边中）→ 瞬时拒绝，重读 state 重试，非致命 |
 | `unknown_action` | 200 | 未知 action（含 `supported`） |
 | `admin_only` | 403 | 需要 `role:"admin"`/`role:"cup"`（如 `close`/`create_cup`/`reward`） |
 | `not_owner` | 403 | `cup` 角色 close 非本 agent 创建的房间 |
@@ -380,6 +384,8 @@ AI 接口无前端，技能次数 / 背包由**服务端权威记账**，随 `st
 | 引擎透传 | 200 | `not_choose_phase`/`bs_in_progress`/`condition_failed`/`invalid_item`/`invalid_duel_session` |
 
 `reason_detail` 取值：`match_not_live`（比赛未进行）/ `not_your_turn`（没轮到我）/ `phase_mismatch`（阶段不符）/ `out_of_stock`（道具库存耗尽）/ `skills_exhausted`（半局技能次数用满）/ `already_used`（同种道具本半局已用）。
+
+> **瞬时可重试（时机未到，绝不退场）**：`not_defender` / `not_attacker` / `not_my_turn` / `not_your_turn` / `turn_not_ready` 均为半局切换时序窗口的 `not_*`，一律 sleep 后重读 `state` 重试。误当致命错误退出 = 对局静默卡死。
 
 ## 判断成功
 

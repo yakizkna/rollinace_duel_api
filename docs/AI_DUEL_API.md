@@ -626,6 +626,13 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
   防守方 `set_pitch` 选定本半局投手风格，避免开局帧先于投手设定发出；
   `duel_end==="half"` 且 `to_move!==my_side`（防守方）时，若 `allowed_actions` 含 `set_pitch`
   应执行 `act { op:"set_pitch", pitch }` 选定投手风格（超时不选由对方 7s 后按默认 `bs` 兜底）。
+
+> **半局切换时序窗口（重要，机器人必看）**：换边瞬间，`state` 可能**提前**下发下一个半局的 `allowed_actions`
+> （如防守方已看到 `set_pitch`、或新攻击方已看到 `duel_half_start`），但服务端**角色权（防守权 / 进攻权）
+> 尚未正式生效**。此时立即 `act` 会返回**瞬时拒绝** `not_defender` / `not_attacker` / `turn_not_ready`
+> （以及 `not_my_turn` / `not_your_turn`）。这**不是致命错误**，只是「时机未到」——
+> 请 `sleep` 一小会儿后**重读 `state`** 重试（通常几百毫秒内角色权即生效，重试即可命中）。
+> **切勿把这类 `not_*` 当成不可恢复而退出走棋循环**，否则整场对局会静默卡死（典型踩坑见下方「错误分类」）。
 - `pitch`：本半局投手风格（`"bb"` 偏看 / `"bs"` 平衡默认 / `"ss"` 偏打；`null`=尚未设定）。
   由当前防守方在半局换边后设定一次，本半局内对方好坏球投球按该分布掷出（球面类型仍逐球可见，
   投手风格仅不直接展示标签）。
@@ -1168,6 +1175,10 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
 | `waiting_pitch` | 200 | 首局 `init` 时房间投手风格未设定（等主队「先发」选择），就绪后重试 |
 | `illegal_op` | 200 | 操作不合法（响应含 `allowed`、`reason_detail`） |
 | `version_conflict` | 200 | `expect_version` 与当前版本不一致（重复提交） |
+| `not_defender` | 200 | 半局切换时序窗口：你方为防守方但**防守权尚未正式生效**（服务端已提前下发 `set_pitch` 的 `allowed_actions`）→ 瞬时拒绝。**重读 `state` 重试，非致命** |
+| `not_attacker` | 200 | 半局切换时序窗口：你方为攻击方但**进攻权尚未正式生效** → 瞬时拒绝。**重读 `state` 重试，非致命** |
+| `not_my_turn` / `not_your_turn` | 200 | 还没轮到你 → 继续等 + heartbeat（正常半局等待，非致命） |
+| `turn_not_ready` | 200 | 轮次尚未就绪（半局切换 / 换边过程中）→ 瞬时拒绝。**重读 `state` 重试，非致命** |
 | `unknown_action` | 200 | 未知 action（响应含 `supported`） |
 | `admin_only` | 403 | 仅管理员 agent（`role:"admin"`）可调用的接口（如 `close`） |
 | `seat_reserved` | 403 | 目标席位已由 `ai_agent_for` 预留给指定 agent，当前 agent 无权加入 |
@@ -1183,6 +1194,11 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
 
 > `reason_detail` 取值：`match_not_live`（比赛未进行）/ `not_your_turn`（没轮到我）/ `phase_mismatch`（阶段不符）/
 > `out_of_stock`（道具库存耗尽）/ `skills_exhausted`（半局技能次数用满）/ `already_used`（同种道具本半局已用）。
+
+> **错误分类（机器人必读）**：
+> - **瞬时可重试（时机未到，绝不退场）**：`not_defender` / `not_attacker` / `not_my_turn` / `not_your_turn` / `turn_not_ready` —— 一律 `sleep` 后**重读 `state` 重试**；这些 `not_*` 都是「角色权 / 轮次尚未生效」的时序窗口，几百毫秒内即恢复。把它们当致命错误退出 = 对局静默卡死（详见上方「半局切换时序窗口」）。
+> - **需重读局面纠正**：`illegal_op` / `version_conflict` / `phase_mismatch` —— 重读 `state`，按最新 `allowed_actions` 重选。
+> - **结构性（通常换房 / 停止）**：`room_closed` / `duel_ended` / `seat_taken` / `internal` 等。
 
 > **判断成功以 `ok === true` 为准**（业务失败多为 HTTP 200 + `ok:false` + `reason`），不要只看 HTTP 状态码。
 

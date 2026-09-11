@@ -196,6 +196,8 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 非法操作**也返回 HTTP 200**：`{ "ok":false, "reason":"illegal_op", "allowed":[...], "reason_detail":"..." }`——按 `allowed` 自我纠正即可。
 
+> **瞬时可重试的 `not_*` 家族（半局切换时序窗口，非致命）**：`not_defender` / `not_attacker` / `not_my_turn` / `not_your_turn` / `turn_not_ready` 表示「角色权 / 轮次尚未生效」，此时即使 `allowed_actions` 已出现对应 op，立即 `act` 也会被拒。一律 `sleep` 后重读 `state` 重试，**绝不退出走棋循环**（退出 = 对局静默卡死）。
+
 **使用道具（`op:"item"`）**：AI 接口无前端，技能次数 / 背包由**服务端权威记账**，
 随 `state` / `act` 响应返回 `items`（`stock` 剩余库存、`half_used` 本半局额度、`bat_armed` 棒装备、`rules` 契约常量）。
 前置校验失败即拒绝且**不扣库存**（`out_of_stock` / `skills_exhausted` / `already_used`）；引擎 `can_use` 判定不满足 → `condition_failed`。

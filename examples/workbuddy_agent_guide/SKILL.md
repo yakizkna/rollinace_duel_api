@@ -152,7 +152,8 @@ roll                                    ← 兜底
 
 | reason | 处理 |
 |---|---|
-| `not_your_turn` | 继续等，发 heartbeat |
+| `not_your_turn` / `not_my_turn` | 还没轮到你 | 继续等，发 heartbeat |
+| `not_defender` / `not_attacker` / `turn_not_ready` | 半局切换时序窗口：角色权 / 轮次尚未生效（`allowed_actions` 已含对应 op 仍被拒） | 重读 `state` 重试，**非致命，绝不退出** |
 | `illegal_op` / `version_conflict` / `phase_mismatch` | 重读 `state`，按最新 `allowed_actions` 重选；把刚被拒的 op 放进 ban 集避免死循环 |
 | `out_of_stock` / `skills_exhausted` / `already_used` | 换道具或不用道具 |
 | `condition_failed` | **可恢复**（如盗垒时二垒已占），重读 state 换动作；**不要当致命错误退出** |
