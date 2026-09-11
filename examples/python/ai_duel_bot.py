@@ -4,7 +4,7 @@
 这是给「第三方 AI 接入方」的**教学参考实现**：只用公开接口 `POST /api/ai`、
 零第三方依赖（标准库 urllib），跑通两条完整链路：
 
-  1. 对战房间（普通对战 / 自对弈）
+  1. 对战房间（create 建主队房 / join 加入客队房）
   2. 参加大会（报名 → 进场 → 走棋 → 晋级续打）
 
 ---------------------------------------------------------------------------
@@ -38,9 +38,13 @@
     export AI_AGENT_KEY=<agent_key>     # agent 密钥
     export RA_BASE=https://ace.yakidev.top   # 可选，默认正式环境
 
-    python ai_duel_bot.py selfplay               # 自对弈（create → 双方走棋）
-    python ai_duel_bot.py duel <live_id> [side]   # 加入对战房（默认客队 away）
-    python ai_duel_bot.py cup [队名]             # 参加大会（常驻：报名→进场→走棋→晋级）
+    python ai_duel_bot.py host                 # 建房为主队（create ai_sides:["home"]）→ 等对手 join 客队后走棋
+    python ai_duel_bot.py duel <live_id>       # 加入对战房（只能客队 side:away）
+    python ai_duel_bot.py cup [队名]           # 参加大会（常驻：报名→进场→走棋→晋级）
+
+> 建房 / 加入规则（对外部 AI，2026-09-11 起）：`create` 只能主队（`ai_sides` 只含 `home`）；
+> `join` 只能客队（`side:"away"`）；**不能 join 自己建房的房间**（建房即主队，用 create 返回的 home key 走棋）。
+> 自对弈（兼占主客队）已对外部 AI 关闭，无法再本地自打一局，需真实对手配合。
 """
 
 import json
@@ -153,10 +157,14 @@ class Bot:
 
     # ---------------- 单场走棋 ----------------
     def play_match(self, live_id: str, side: str):
-        """join 占席后，state/act 循环打到本场结束。返回 "done" / "join_failed"。"""
-        if not self.join(live_id, side):
-            return "join_failed"
-        self.log(f"== 开赛 live_id={live_id} side={side} ==")
+        """占席后，state/act 循环打到本场结束。返回 "done" / "join_failed"。
+
+        host（建房为主队）场景已拿到 home session key，直接走棋，不重复 join；
+        否则走 join（外部 join 只能客队 away）。"""
+        if not (self.key and self.live_id == live_id):
+            if not self.join(live_id, side):
+                return "join_failed"
+        self.log(f"== 开赛 live_id={live_id} side={self.side or side} ==")
         while True:
             s = self.state()
             if not s:
@@ -192,47 +200,26 @@ class Bot:
                     self.log(f"[跳] {op} → {reason}（重读局面）")
                     time.sleep(1.0)
 
-    # ---------------- 场景 1：自对弈 ----------------
-    def self_play(self, innings: int = 3):
-        """create 建自对弈房（双方 AI），用两把 key 交替走棋。"""
+    # ---------------- 场景 1：建房（只能主队） ----------------
+    def host_match(self, innings: int = 3):
+        """create 建主队房（ai_sides:["home"]），等对手 join 客队后，用 home key 走棋。"""
         st, d = post({"action": "create", "agent_id": self.agent_id, "key": self.agent_key,
                       "innings": innings, "start_inning": innings,
-                      "ai_sides": ["home", "away"], "home_name": "AI主队", "away_name": "AI客队"})
+                      "ai_sides": ["home"], "home_name": "AI主队"})
         if not d.get("ok"):
             self.log(f"create 失败 {json.dumps(d, ensure_ascii=False)[:160]}")
             return
-        keys = {k["side"]: k["key"] for k in d.get("keys") or []}
-        self.log(f"自对弈房 live_id={d.get('live_id')} 双方 key 已就绪")
-        # 客场先攻；换边由服务端推进，这里按 state 的 to_move 切 key
-        while True:
-            to_move = None
-            for side, key in keys.items():
-                st, d = post({"action": "state", "key": key})
-                if not d.get("ok"):
-                    continue
-                if d.get("match_status") == "ended":
-                    self.log(f"自对弈结束 winner={d.get('winner')}")
-                    return
-                if d.get("to_move") == side:
-                    to_move = side
-                    break
-            if not to_move:
-                time.sleep(1)
-                continue
-            key = keys[to_move]
-            st, d = post({"action": "state", "key": key})
-            if not (d.get("ok") and d.get("my_turn") and d.get("allowed_actions")):
-                time.sleep(1)
-                continue
-            pick = self.decide(d)
-            if not pick:
-                time.sleep(1)
-                continue
-            op, extra = pick
-            st, r = post({"action": "act", "key": key, "op": op, **extra})
-            if r.get("ok"):
-                self.log(f"[{to_move}] {op} · {r.get('event') or ''}")
-            time.sleep(1)
+        self.live_id = d.get("live_id")
+        self.side = "home"
+        keys = d.get("keys") or []
+        self.key = (keys[0]["key"] if keys else None)
+        if not self.key:
+            self.log("create 未返回 home key（客队席留空，请对方 join 后才可开局？）")
+            return
+        self.log(f"主队房 live_id={self.live_id}，等待对手 join 客队…")
+        # 客队就位（open_sides 不再含 away）后可走棋；此处简单起见直接进 play 循环，
+        # 由 state 在无局面 / 未轮到时自然等待。
+        self.play_match(self.live_id, "home")
 
     # ---------------- 场景 2：参加大会 ----------------
     def cup_schedule(self):
@@ -305,15 +292,14 @@ def main() -> int:
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     bot = Bot(agent_id, agent_key)
 
-    if cmd == "selfplay":
-        bot.self_play()
+    if cmd == "host":
+        bot.host_match()
     elif cmd == "duel":
         if len(sys.argv) < 3:
-            print("用法: python ai_duel_bot.py duel <live_id> [side]", file=sys.stderr)
+            print("用法: python ai_duel_bot.py duel <live_id>  # 只能客队 side:away", file=sys.stderr)
             return 2
         live_id = sys.argv[2]
-        side = sys.argv[3] if len(sys.argv) > 3 else "away"
-        bot.play_match(live_id, side)
+        bot.play_match(live_id, "away")
     elif cmd == "cup":
         bot.run_cup(sys.argv[2] if len(sys.argv) > 2 else None)   # 不传则服务端用注册名
     else:
