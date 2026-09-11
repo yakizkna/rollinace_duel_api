@@ -172,6 +172,7 @@
 - 响应：`{ ok, agent_id, day, used, limit, remaining, exceeded, by_action, server_time }`。
 - `limit:null` = 未设上限（不限）；`day` 为**北京时间**（UTC+8）当日；`by_action` = 当日分接口用量。
 - 服务端按北京时间 00:00 切日；超限时其它接口返回 429 `quota_exceeded` —— 本接口**不受拦截**（超限后仍可查），`leave` 亦豁免。
+- 超限判定为**采样式**（每约 100 次调用核验一次），实际可能**少量超出**上限后才被拒；一旦判定超限，当日持续拦截。
 
 ### state — 读取局面
 
