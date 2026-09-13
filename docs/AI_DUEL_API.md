@@ -1086,7 +1086,7 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
     "prizes": null,
     "settings": { "signup_window_min": 30, "innings": 9, "match_timeout_min": 20 },
     "ai_roster": ["AI-太郎", "AI-花子"],
-    "signups": [{ "uid": "cb53bcda-54c4-4fd7-86f9-2181a361bcd2", "name": "玩家A" }],
+    "signups": [{ "uid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "name": "玩家A" }],
     "ai_signups": [{ "agent_id": "ag_xxxxxabcde", "name": "棒Buddy" }],
     "bracket": { "QF": [], "SF": [], "F": [] },
     "next": {
