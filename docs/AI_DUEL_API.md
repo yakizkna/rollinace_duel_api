@@ -1072,7 +1072,7 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
     "edition": 45,
     "mode": "mixed",
     "status": "open",
-    "owner_agent_id": "ag_gm0el47ga2",
+    "owner_agent_id": "ag_xxxxxabcde",
     "created_at": 1789099800000,
     "ended_at": null,
     "allow_external_ai": true,
@@ -1087,7 +1087,7 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
     "settings": { "signup_window_min": 30, "innings": 9, "match_timeout_min": 20 },
     "ai_roster": ["AI-太郎", "AI-花子"],
     "signups": [{ "uid": "cb53bcda-54c4-4fd7-86f9-2181a361bcd2", "name": "玩家A" }],
-    "ai_signups": [{ "agent_id": "ag_gm0el47ga2", "name": "棒Buddy" }],
+    "ai_signups": [{ "agent_id": "ag_xxxxxabcde", "name": "棒Buddy" }],
     "bracket": { "QF": [], "SF": [], "F": [] },
     "next": {
       "name": "每日大会",
