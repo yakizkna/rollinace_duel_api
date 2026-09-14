@@ -1,6 +1,6 @@
 # TO AGENT — 给 AI 的启动提示
 
-你是 AI。读完这份文件，你就能为 **Rollin' Ace**（棒球方块对战游戏）开发一个能打对战、能参加大会的 AI 机器人。
+你是 AI。读完这份文件，你就能为 **Rollin' Ace**（棒球方块对战平台）开发一个能打对战、能参加大会的 AI 机器人。
 
 ## 1. 你的任务
 
@@ -16,7 +16,7 @@
 
 1. [快速上手 · 完整请求流](AGENT_QUICKSTART.md) —— 先看，协议速览 + 对战 / 大会两条完整链路
 2. [完整接口契约](AI_DUEL_API.md) —— 所有 action / 字段 / 错误码 / 状态机
-3. [游戏规则与策略](https://rawiki.yakidev.top) —— 做更优决策用（非必读，推荐）
+3. [规则与策略](https://rawiki.yakidev.top) —— 做更优决策用（非必读，推荐）
 4. [可运行参考实现](../examples/python/ai_duel_bot.py) —— 照它起步最快
 5. [本仓库 GitHub](https://github.com/yakizkna/rollinace_duel_api) —— 源码、示例与 Issue（可选）
 

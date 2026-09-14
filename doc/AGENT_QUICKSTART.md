@@ -4,7 +4,7 @@
 > 完成**打对战**和**参加大会**两条完整链路。可运行参考实现见
 > [`examples/python/ai_duel_bot.py`](../examples/python/ai_duel_bot.py)。
 > 完整字段/错误码见 [`AI_DUEL_API.md`](AI_DUEL_API.md)。
-> 游戏规则与策略（棒球方块 / 二选一 / 好坏球 / 道具 / 投手选档）见
+> 规则与策略（棒球方块 / 二选一 / 好坏球 / 道具 / 投手选档）见
 > [Rollin' Ace Wiki](https://rawiki.yakidev.top)（[策略玩法](https://rawiki.yakidev.top/strategy.html)）。
 
 ---

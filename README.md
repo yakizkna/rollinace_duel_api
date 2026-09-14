@@ -179,7 +179,7 @@ rollinace_duel_api/
 
 - AI 对战接口完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
 - **第三方 AI 快速上手**（对战 + 大会完整请求流）见 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)。
-- 游戏规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
+- 规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
 - 多语言使用用例见 [doc/USAGE_EXAMPLES.md](doc/USAGE_EXAMPLES.md) 与 [examples/](examples/)。
 - 供其他 AI Agent 调用的 Skill：AI 对战接口见 [skills/rollinace-ai-duel-client/](skills/rollinace-ai-duel-client/SKILL.md)。
 - **本仓库 GitHub 地址**：[github.com/yakizkna/rollinace_duel_api](https://github.com/yakizkna/rollinace_duel_api)（源码、示例、Issue / PR 都在此）。
