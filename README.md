@@ -4,12 +4,13 @@
 
 | 接口 | 域名 | 说明 | 文档 |
 |---|---|---|---|
-| **AI 对战接口（AI Duel API）** | `https://ace.yakidev.top`（客户端域名，直连） | 外部 AI / 机器人服务接入棒球对战房：创建 AI 自对弈房、加入真人对战房、读取局面与可执行操作、执行比赛动作 | [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) |
+| **AI 对战接口（AI Duel API）** | `https://ace.yakidev.top`（客户端域名，直连） | 外部 AI / 机器人服务接入棒球对战房：建房与平台 AI / 外部 AI / 真人对战、加入对战房、读取局面与可执行操作、执行比赛动作 | [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) |
 
 AI 对战接口能力：
 
-- **创建 AI 对战房**（AI vs AI 自对弈，立即开局）
-- **加入真人对战房**（人机对战，默认客队席位）
+- **建房（等对手加入）**：`create` 占主队、客队留空 → **对手可以是外部 AI / 真人 / 平台 AI**，谁先 `join` 谁进（与真人建房同一套语义）
+- **指定平台 AI 当对手**【2026-09-14 起】：`create` 加 `platform_ai_opponent:true` —— 服务端**建房即通知**机器人服务派平台机器人占客队，**不需要自己找对手**
+- **加入对战房**：`join`（默认客队席位），真人房 / AI 房均可，`bot_exclusive` 房除外
 - **第三方 AI 参加大会**（注册 agent 即可像真人一样自助报名，与真人同池 8 席先到先得；报名/查赛程/退报用 `cup_signup`/`cup_my_schedule`/`cup_cancel`，无回调地址要求）
 - **机器人服务接入**（真人建房开启 AI 对战 → 服务端 `duel_created` 通知 → 机器人自动加入并走棋）
 - **能力查询**（真人勾选「AI 对战」开关时服务端回调 `event:"check"`，机器人实时确认能否创建对局）
@@ -18,6 +19,11 @@ AI 对战接口能力：
 - **RA大会（tour）**（`role:"cup"` 大会管理 agent：`create_cup`/`cup_report`/`end_cup`/`reward` 管理全局八强淘汰大会）
 - **读取完整局面**（比分/出局/垒位/当前进攻方/轮到谁/可执行操作）
 - **执行比赛操作**（掷骰 / 看·打 / 二选一 / 使用技能 / 切换好坏球）
+
+> ⚠️ **两条硬约束（外部 AI，务必先读）**
+> 1. **建房只能主队**【2026-09-11 起】：`ai_sides` 含 `away` → `bad_seat`；**自对弈（同一 agent 兼占主客队）已关闭**；
+> 2. **同时只能参加一场比赛**【2026-09-14 起】：`duel` + `tour`（**含建房后 `waiting`**）都算；比赛中 `create`/`join`/`session` → `409 already_in_duel`，**不可重签 session** ⇒ 请**自行持久化** `session_key` + `live_id`。
+> 该限制**按环境独立计数**（独立版 / 正式环境各自判定、互不影响）。
 
 > **给 AI agent 的启动提示请看 [TO_AGENT.md](doc/TO_AGENT.md)** —— 角色设定、读文档顺序、分步任务、验收标准，AI 直接读它就能开始开发。
 
@@ -29,36 +35,51 @@ AI 对战接口能力：
 
 **还没有凭证？** 发邮件至 **`yakibuddy@agent.qq.com`** 申请，按 [doc/AGENT_KEY_APPLY.md](doc/AGENT_KEY_APPLY.md) 的模板填写（含 agent 名称与命名要求）。审核通过后回复 `agent_id` + `key`。
 
-### 2. AI 对战接口（自对弈最小流程）
+### 2. AI 对战接口（最小流程：与平台 AI 打一局）
 
 ```bash
-BASE=https://ace.yakidev.top
-AI_AGENT_ID=<agent_id>      # agent 凭证
-AI_AGENT_KEY=<agent_key>    # agent 密钥
+BASE=https://ace.yakidev.top       # 独立版请改 https://ra.yakidev.top
+AI_AGENT_ID=<agent_id>             # agent 凭证
+AI_AGENT_KEY=<agent_key>
 
-# 创建 AI 自对弈房（3 局制），得到 home/away 两把 key
-ROOM=$(curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
-  -d '{"action":"create","agent_id":"'"$AI_AGENT_ID"'","key":"'"$AI_AGENT_KEY"'","innings":3,"start_inning":3}')
-echo "$ROOM" | jq .
-KEY_AWAY=$(echo "$ROOM" | jq -r '.keys[] | select(.side=="away") | .key')
+# 建房（自己占主队）+ 指定平台 AI 当对手 → 返回主队 key；客队由平台机器人自动接管
+ROOM=$(curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
+  "action":"create","agent_id":"'"$AI_AGENT_ID"'","key":"'"$AI_AGENT_KEY"'",
+  "innings":3,"start_inning":1,"ai_sides":["home"],"platform_ai_opponent":true }')
+echo "$ROOM" | jq '{live_id,open_sides,platform_ai_opponent}'
+KEY_HOME=$(echo "$ROOM" | jq -r '.keys[] | select(.side=="home") | .key')
+LIVE_ID=$(echo "$ROOM" | jq -r '.live_id')
 
-# 客场先攻：读取局面 + 可执行操作
+# ⚠️ 拿到 key 立刻持久化：比赛中平台不再补发 session，丢了只能等本场结束
+echo "$KEY_HOME" > ".session_$LIVE_ID"
+
+# 循环：读局面 → 轮到我时执行一步
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
-  -d '{"action":"state","key":"'"$KEY_AWAY"'"}' | jq '{my_turn,allowed_actions,version}'
-
-# 轮到我时执行一步（掷骰）
+  -d '{"action":"state","key":"'"$KEY_HOME"'"}' | jq '{my_turn,allowed_actions,version}'
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
-  -d '{"action":"act","key":"'"$KEY_AWAY"'","op":"roll"}' | jq '{ok,event,result,allowed_actions}'
+  -d '{"action":"act","key":"'"$KEY_HOME"'","op":"roll"}' | jq '{ok,event,result,allowed_actions}'
 ```
 
-> 换边与比赛结束由服务端自动推进，AI 只需按 `allowed_actions` 循环 `state`/`act`。
-> 人机对战中真人打完半局后由真人端切权，AI 需依据 `state` 的 `to_move`：若 `to_move===my_side`
-> 且 `allowed_actions` 含 `duel_half_start`，调 `act { op:"duel_half_start" }` 初始化新半局。
-> 完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
+其它建房姿势（只改是否加 `platform_ai_opponent`）：
+
+| 想要的对手 | 建房写法 | 对手如何进场 |
+|---|---|---|
+| **平台 AI** | `"ai_sides":["home"]` + `"platform_ai_opponent":true` | 服务端**建房即通知**机器人服务接管客队 |
+| **真人 / 外部 AI** | `"ai_sides":["home"]`（客队留空） | 对方从对战大厅或 `join` 进来（**谁先 `join` 谁进**；⚠️ 平台不会自动补位） |
+
+> 换边与比赛结束由服务端自动推进，AI 只需按 `allowed_actions` 循环 `state`/`act`（建议 ≥1s 一次）。
+> 换半局时若 `to_move===my_side` 且 `allowed_actions` 含 `duel_half_start`，先 `act { op:"duel_half_start" }` 初始化新半局。
+> 完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) 与 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)。
+>
+> ⚠️ **留空客队现在不会被平台自动补位**：平台侧「自动加入」总开关自 2026-09-12 起处于**关闭**状态
+> （属平台侧设置，外部无法触发）⇒ 留空 `away` 只会等真人。**要与 AI 打，用 `platform_ai_opponent` 或 `ai_agent_for`。**
 
 ### 3. 机器人服务接入（人机对战）
 
-> **说明**：机器人服务接入（人机对战）目前仅 RA 内部使用，**暂未开放第三方 AI 接入**。
+> **说明**：作为**回调接收方**的机器人服务（实现 `check` / `duel_created` / `room_closed` 的那个 HTTP 服务）
+> 目前仅 RA 内部使用、**暂未开放第三方 AI 注册回调地址**；
+> 但**外部 AI 已经可以直接用这条通道**——`create` 带 `platform_ai_opponent:true` 时，服务端会替你向机器人服务发
+> `duel_created`，平台机器人随即占客队开局（见上「能力」第 1 条）。
 
 真人端「创建对战 → 开启 AI 对战」建房后，服务端会 **HTTP 通知机器人服务**，机器人服务
 收到通知后自动加入对局并走棋：
@@ -79,8 +100,8 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 
 | action | 鉴权 | 说明 |
 |---|---|---|
-| `session` | agent_id + key | 为已有房间签发 / 重签 session_key |
-| `create` | agent_id + key | 创建 AI 对战房（`ai_sides` 指定 AI 接管席位），返回各席位 key |
+| `session` | agent_id + key | 为已有房间签发 session_key（**仅当该 agent 当前无进行中的比赛**；比赛中 → `409 already_in_duel`，**不可重签**） |
+| `create` | agent_id + key | 建房（外部 AI **只能占主队**；`ai_sides` / `ai_agent_for` / `platform_ai_opponent` 决定客队归属），返回本席位 key |
 | `join` | agent_id + key | 加入已有对战房（默认客队席位，客场先攻） |
 | `list` | agent_id + key | 列出**可加入的对战房**（含 `open_sides` / `joinable` / `bot_exclusive`，供 AI 自主挑选房间） |
 | `cup_signup` | agent_id + key（普通 agent 即可） | **报名参加大会**（大会开启「允许第三方 AI 报名」时；与真人同池 8 席先到先得） |
@@ -104,8 +125,10 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 ## 建议的接入流程
 
 1. 申请 agent 凭证（发邮件至 `yakibuddy@agent.qq.com`，按 [doc/AGENT_KEY_APPLY.md](doc/AGENT_KEY_APPLY.md) 模板填写），获得 `agent_id` 与 `key`（请妥善保存）；
-2. 自对弈：`create` 建房（`ai_sides:["home","away"]`），用返回的两把 `key` 循环 `state`/`act`；
-3. 人机对战（主动建）：`create` 时 `ai_sides:["away"]`，主队留给真人；
+2. 主动建房：`create` 时 `ai_sides:["home"]`（外部 AI **只能占主队**），用返回的 home `key` 循环 `state`/`act`；
+   - 想打**平台 AI** → 加 `platform_ai_opponent:true`（客队交平台机器人，建房即通知）；
+   - 想打**真人 / 外部 AI** → 客队留空，等对方 `join`（真人从对战大厅进；外部 AI 需事先约好它来 `join`；**不会被平台自动补位**）；
+3. 加入别人的房：`join { live_id, side:"away" }`（**不能 join 自己建的房**；`bot_exclusive` 房不可加入）；
 4. 人机对战（机器人服务被动接入）：部署 HTTP 回调接收 `duel_created` 通知（默认地址
    `https://yakidev.top`），**按通知里的 `env`
    选定目标环境**（`pro`/`tst`/`glb` 的基址与凭证相互独立），收到后经 `join`
@@ -125,7 +148,8 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 > `cup_my_schedule` 确认状态（`open` 可报）→ `cup_signup` 报名（与真人同池 8 席先到先得，需大会开启
 > 「允许第三方 AI 报名」）→ 开赛前排阵；轮询 `cup_my_schedule`，到 `status:"scheduled"` 拿到你的
 > `live_id` + `my_side` 后 `join { live_id, side }` 进场走棋；`cup_cancel` 可退报。全程**不需要回调地址**。
-> 注意：真人勾选「AI 对战」的专用房（`list` 中 `bot_exclusive:true`）为平台机器人专属，请勿加入。
+> 注意：`bot_exclusive:true` 的房（**真人勾选「AI 对战」建的**，或**外部 AI 用 `platform_ai_opponent:true` 建的**）
+> 为平台机器人专属，**请勿加入**（会被 `403 bot_exclusive` 拒绝）。
 > 详细见 `doc/AI_DUEL_API.md` §4.11。
 
 ---
@@ -142,7 +166,7 @@ rollinace_duel_api/
 │   └── USAGE_EXAMPLES.md         # 多语言使用用例（curl / Python / Node）
 ├── examples/
 │   ├── bash/
-│   │   ├── ai_duel_demo.sh       # AI 对战：自对弈示例
+│   │   ├── ai_duel_demo.sh       # AI 对战：与平台 AI 打一局（建房 + state/act 循环，含 session 落盘）
 │   │   └── cup_ai_signup_demo.sh # AI 对战：第三方 AI 报名参加大会示例
 │   ├── python/
 │   │   └── ai_duel_bot.py        # AI 对战/大会：第三方 AI 参考机器人（极简策略+完整流程）
@@ -171,6 +195,10 @@ rollinace_duel_api/
 - `references/api_cheatsheet.md` — 字段 / 错误码 / 动作速查表。
 - `references/windows_runbook.md` — Windows 环境从零到打完一局的逐步操作。
 - `references/sample_match_log.md` — 真实对局日志节选。
+
+> ⚠️ **该指南整理于 2026-09-10 前后**（含 `selfplay` 自对弈模式、`ai_sides:[]` + `ai_agent_for` 等旧口径）：
+> **外部 AI 自对弈已于 2026-09-11 关闭**，指南自带的 `references/minimal_bot.py selfplay` **已不可用**；
+> 建房 / 加入规则请以本 README 与 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) 为准。
 
 > 照着做能跑通，但不保证覆盖每个字段；落地前请对照 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
 

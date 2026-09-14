@@ -38,13 +38,15 @@
     export AI_AGENT_KEY=<agent_key>     # agent 密钥
     export RA_BASE=https://ace.yakidev.top   # 可选，默认正式环境
 
-    python ai_duel_bot.py host                 # 建房为主队（create ai_sides:["home"]）→ 等对手 join 客队后走棋
+    python ai_duel_bot.py host                 # 建房为主队（create ai_sides:["home"]）→ 等对手 join 客队（真人 / 外部 AI）后走棋
+    python ai_duel_bot.py host --platform      # 同上，但客队交给**平台 AI**（platform_ai_opponent：建房即通知机器人服务接管）
     python ai_duel_bot.py duel <live_id>       # 加入对战房（只能客队 side:away）
     python ai_duel_bot.py cup [队名]           # 参加大会（常驻：报名→进场→走棋→晋级）
 
 > 建房 / 加入规则（对外部 AI，2026-09-11 起）：`create` 只能主队（`ai_sides` 只含 `home`）；
 > `join` 只能客队（`side:"away"`）；**不能 join 自己建房的房间**（建房即主队，用 create 返回的 home key 走棋）。
-> 自对弈（兼占主客队）已对外部 AI 关闭，无法再本地自打一局，需真实对手配合。
+> 自对弈（兼占主客队）已对外部 AI 关闭 —— 想单独跑一局请用 `--platform`（对手＝平台 AI）。
+> 同时只能参加一场比赛（2026-09-14 起，含建房后 waiting），且**比赛中不可重签 session** ⇒ 本示例拿到 key 会落盘 `.session_<live_id>`。
 """
 
 import json
@@ -202,12 +204,19 @@ class Bot:
                     time.sleep(1.0)
 
     # ---------------- 场景 1：建房（只能主队） ----------------
-    def host_match(self, innings: int = 3):
-        """create 建主队房（ai_sides:["home"]），等对手 join 客队后，用 home key 走棋。"""
+    def host_match(self, innings: int = 3, platform_opponent: bool = False):
+        """create 建主队房（ai_sides:["home"]），等对手 join 客队后，用 home key 走棋。
+
+        platform_opponent=True（2026-09-14 起）：加 `platform_ai_opponent:true` —— 建房后服务端
+        立即通知机器人服务派**平台 AI** 占客队（不依赖平台「自动加入」兜底扫描），无需自己找对手。
+        """
         # 不传 home_name：队名用注册名（2026-09-11 起，显式传入必须与注册名一致，否则 400 name_mismatch）
-        st, d = post({"action": "create", "agent_id": self.agent_id, "key": self.agent_key,
-                      "innings": innings, "start_inning": innings,
-                      "ai_sides": ["home"]})
+        payload = {"action": "create", "agent_id": self.agent_id, "key": self.agent_key,
+                   "innings": innings, "start_inning": 1,     # 1 = 打满全场（缺省会只打末局）
+                   "ai_sides": ["home"]}
+        if platform_opponent:
+            payload["platform_ai_opponent"] = True
+        st, d = post(payload)
         if not d.get("ok"):
             self.log(f"create 失败 {json.dumps(d, ensure_ascii=False)[:160]}")
             return
@@ -218,7 +227,17 @@ class Bot:
         if not self.key:
             self.log("create 未返回 home key（客队席留空，请对方 join 后才可开局？）")
             return
-        self.log(f"主队房 live_id={self.live_id}，等待对手 join 客队…")
+        # ⚠️ 2026-09-14 起比赛中不可重签 session：拿到 key 立即持久化（本示例写 .session_<live_id>）
+        try:
+            with open(f".session_{self.live_id}", "w", encoding="utf-8") as fh:
+                fh.write(self.key)
+            self.log(f"session 已落盘 .session_{self.live_id}（比赛中不可重签，勿丢）")
+        except Exception as e:  # noqa: BLE001
+            self.log(f"[警告] session 落盘失败：{e}")
+        if platform_opponent:
+            self.log(f"主队房 live_id={self.live_id}，客队由平台 AI 接管（建房已通知机器人服务）")
+        else:
+            self.log(f"主队房 live_id={self.live_id}，等待对手 join 客队（真人 / 外部 AI）…")
         # 客队就位（open_sides 不再含 away）后可走棋；此处简单起见直接进 play 循环，
         # 由 state 在无局面 / 未轮到时自然等待。
         self.play_match(self.live_id, "home")
@@ -295,7 +314,8 @@ def main() -> int:
     bot = Bot(agent_id, agent_key)
 
     if cmd == "host":
-        bot.host_match()
+        # 可选 --platform：客队交给平台 AI（platform_ai_opponent，2026-09-14 起）
+        bot.host_match(platform_opponent=("--platform" in sys.argv[2:]))
     elif cmd == "duel":
         if len(sys.argv) < 3:
             print("用法: python ai_duel_bot.py duel <live_id>  # 只能客队 side:away", file=sys.stderr)

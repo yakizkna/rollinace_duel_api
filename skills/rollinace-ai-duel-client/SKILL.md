@@ -35,8 +35,8 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 
 | action | 鉴权 | 说明 |
 |---|---|---|
-| `session` | agent_id + key | 为已有房间签发 / 重签 session_key（side 省略时自动挑空席，先 away 后 home） |
-| `create` | agent_id + key | 创建 AI 对战房（`ai_sides` 指定由 AI 接管的席位），返回各席位 key |
+| `session` | agent_id + key | 为已有房间签发 session_key（side 省略时自动挑空席，先 away 后 home）；**仅当该 agent 当前无进行中的比赛**——比赛中 → 409 `already_in_duel`，**不可重签**【2026-09-14 起】 |
+| `create` | agent_id + key | 建房：外部 AI **只能占主队**（`ai_sides` 含 `away` → `bad_seat`）；`ai_agent_for` 预留外部 AI 席 / `platform_ai_opponent:true` 让平台 AI 占客队，返回本席位 key |
 | `join` | agent_id + key | 加入已有对战房（默认客队席位，客场先攻），返回 key；预留席/专用房有归属校验（403 `seat_reserved`/`bot_exclusive`） |
 | `list` | agent_id + key | 列出**可加入的对战房**（含 `open_sides` / `joinable` / `bot_exclusive`，供 AI 自主挑选房间） |
 | `cup_signup` | agent_id + key（普通 agent 即可） | 报名参加大会（大会开启「允许第三方 AI 报名」时；与真人同池 8 席先到先得） |
@@ -55,14 +55,22 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 
 以 curl 为例（`BASE=https://ace.yakidev.top`，`AI_AGENT_ID`/`AI_AGENT_KEY` 为 agent 凭证，`KEY` 为 session_key）：
 
-### 创建 AI 自对弈房
+### 建房（外部 AI 只能主队）
+
+与**平台 AI** 对战（**不需要自己找对手**，推荐）：
 
 ```bash
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
-  "action":"create","agent_id":"$AI_AGENT_ID","key":"$AI_AGENT_KEY",
-  "home_name":"AI主队","away_name":"AI客队","innings":9,"start_inning":9,
-  "ai_sides":["home","away"]
+  "action":"create","agent_id":"'$AI_AGENT_ID'","key":"'$AI_AGENT_KEY'",
+  "innings":3,"start_inning":1,
+  "ai_sides":["home"],"platform_ai_opponent":true
 }'
+```
+
+**不指定对手**（客队留空，等对手 `join` —— 对手可以是真人，也可以是你事先约好的外部 AI）：
+
+```bash
+  "ai_sides":["home"]      # 客队留空；⚠️ 平台不会自动补位
 ```
 
 必填字段：
@@ -74,22 +82,29 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 - `home_name` / `away_name`：队名（缺省 `AI主队` / `AI客队`）；
 - `innings`：总局数 1~9（默认 9）；
 - `start_inning`：开局位置（默认等于 `innings`）；
-- `ai_sides`：由 AI 接管的席位数组（默认 `["home","away"]` 自对弈；`["away"]` 表示主队留给真人；`[]` = 空房等对手加入）；
-- `ai_agent_for`：预留外部 AI 席 `{ home?/away?: "ag_xxx" }`（`tour`/`duel` 均可；`tour` 需 `cup`/`admin`），该席留空不发 key，仅对应 agent 可 `join`；
+- `ai_sides`：由 AI 接管的席位数组；**外部 AI 只能传 `["home"]`**（含 `away` → `bad_seat`，自对弈已关闭【2026-09-11 起】）；`[]` = 空房等对手加入（外部 AI 无法自行参战，不建议）；
+- `ai_agent_for`：**进阶**写法，预留**指定外部 AI** 的席 `{ home?/away?: "ag_xxx" }`（`tour` 大会编排在用；duel 一般**不需要**——客队留空等对手 `join` 即可），该席留空不发 key、**仅对应 agent 可 `join`**（对方不会自动来）；
+- `platform_ai_opponent`：`true` = **客队交给平台 AI**【2026-09-14 起】，建房即通知机器人服务派平台机器人占客队，**无需自己找对手**；该房客队只放行平台 agent（第三方 `join` → `403 bot_exclusive`）；
 - `ai_use_bs`：`true` = 要求 AI 对手用好坏球（机器人只派 bs=on 角色参赛）；
 - `stream`：duel 房固定公开直播（`true` 不可关，即「AI 直播」）；tour 房固定 `false`（无需传）；
 - `live_id`：指定房间号（缺省自动生成 8 位）。
 
-成功响应返回 `ok:true`、`live_id`、`ai_sides`、`ai_use_bs`、`match_status`、`agent_id` 与 `keys`（每席位的 `side`/`key`/`expires_at`/`uid`/`agent_id`）。
+成功响应返回 `ok:true`、`live_id`、`ai_sides`、`ai_use_bs`、`match_status`、`open_sides`、`agent_id` 与 `keys`（本席位 `side`/`key`/`expires_at`/`uid`/`agent_id`）；带 `platform_ai_opponent` 时另有 `platform_ai_opponent:true` 与 `platform_ai_seat:"away"`。
 
-> **仅 `ai_sides` 同时含 home 与 away 时才立即开局**（客场先攻）；否则 `match_status` 为 `waiting`，等真人主队进房初始化。
+> **开局时机**：双方席位都就位（都占齐）才开局（客场先攻）；`platform_ai_opponent` / 等真人 / 等对方 `join` 时 `match_status` 为 `waiting`。
+
+> ⚠️ **两条硬约束**：① 外部 AI 建房只能主队、**不能自对弈**；② **同时只能参加一场比赛**（含 `waiting`），
+> 比赛中不可重签 session ⇒ **拿到 `key` 立刻持久化**（`session_key` + `live_id`）。该限制**按环境独立计数**。
 
 ### 机器人服务接入（人机对战）
 
-> **说明**：机器人服务接入（人机对战）目前仅 RA 内部使用，**暂未开放第三方 AI 接入**。
+> **说明**：作为**回调接收方**的机器人服务（实现 `check`/`duel_created`/`room_closed` 的那个 HTTP 服务）
+> 目前仅 RA 内部使用、**暂未开放第三方 AI 注册回调地址**；
+> **但外部 AI 可直接用这条通道** —— `create` 带 `platform_ai_opponent:true` 时，服务端会替你发 `duel_created`。
 
 真人端「创建对战 → 开启 AI 对战」建房（`ai_opponent:true`）后，服务端会 **HTTP 通知机器人服务**，
 机器人服务收到通知后经 `join` 加入客队并自动开局（客场先攻），随后按 `state`/`act` 循环走棋。
+**外部 AI 用 `platform_ai_opponent:true` 建房时走的是同一条通知**（只是发起方从真人端换成 `/api/ai`）。
 
 **通知契约（机器人服务需实现一个 HTTP 回调）：**
 
@@ -105,7 +120,8 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 { "event": "duel_created", "env": "pro",
   "live_id": "ABCD1234", "type": "duel", "ai": true,
   "ai_sides": ["away"], "home_uid": "主队完整uid", "home_name": "主队", "away_name": "AI客队",
-  "duel_innings": 9, "start_innings": 9, "match_status": "waiting", "created_at": 1756500000000 }
+  "duel_innings": 9, "start_innings": 9, "match_status": "waiting", "created_at": 1756500000000,
+  "source": "api_ai_create", "owner_agent_id": "ag_xxxxxabcde" }   // 仅 /api/ai 建房（platform_ai_opponent）时带
 ```
 
 **关房通知（`event:"room_closed"`）**：用户主动关闭对战房间（主播关播 / 对战玩家主动退出）时推送，

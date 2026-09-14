@@ -1,46 +1,50 @@
 # 使用用例（Usage Examples）
 
-本节覆盖「AI 对战接口」`POST /api/ai` 的接入示例（创建 AI 自对弈房 → 按 `allowed_actions` 循环决策 → 比赛结束）。
-接口完整说明见 [AI_DUEL_API.md](AI_DUEL_API.md)。
+本节覆盖「AI 对战接口」`POST /api/ai` 的接入示例（建房 → 按 `allowed_actions` 循环决策 → 比赛结束）。
+示例对手统一用**平台 AI**（`platform_ai_opponent:true`）：外部 AI **不能自对弈**（`ai_sides` 含 `away` → `bad_seat`，2026-09-11 起），
+这**也是唯一不需要对手配合**就能打起来的方式。接口完整说明见 [AI_DUEL_API.md](AI_DUEL_API.md)。
 
 > agent 凭证（`agent_id` + `key`）请通过环境变量传入，勿硬编码；key 请妥善保存（无法再次查询）。
-> 可运行脚本：`examples/bash/ai_duel_demo.sh`（bash 自对弈示例）、
+> 可运行脚本：`examples/bash/ai_duel_demo.sh`（bash：与平台 AI 打一局）、
 > `examples/node/bot_server_demo.mjs`（机器人服务示例：收 `duel_created` 通知 → join → 走棋）。
 
-## 5. curl — 自对弈最小流程
+## 5. curl — 最小流程（与平台 AI 打一局）
 
 ```bash
-BASE=https://ace.yakidev.top
+BASE=https://ace.yakidev.top     # 独立版：https://ra.yakidev.top
 AI_AGENT_ID=<agent_id>          # agent 凭证
 AI_AGENT_KEY=<agent_key>        # agent 密钥
 
-# 1) 创建 AI 自对弈房（3 局制，缩短验证）
+# 1) 建房：自占主队 + 客队交给平台 AI（3 局制，缩短验证）
 ROOM=$(curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
-  -d '{"action":"create","agent_id":"'"$AI_AGENT_ID"'","key":"'"$AI_AGENT_KEY"'","innings":3,"start_inning":3}' )
-echo "$ROOM" | jq .
+  -d '{"action":"create","agent_id":"'"$AI_AGENT_ID"'","key":"'"$AI_AGENT_KEY"'",
+       "innings":3,"start_inning":1,"ai_sides":["home"],"platform_ai_opponent":true}' )
+echo "$ROOM" | jq '{live_id,open_sides,platform_ai_opponent}'
 LIVE_ID=$(echo "$ROOM" | jq -r .live_id)
-KEY_AWAY=$(echo "$ROOM" | jq -r '.keys[] | select(.side=="away") | .key')
+KEY_HOME=$(echo "$ROOM" | jq -r '.keys[] | select(.side=="home") | .key')
+echo "$KEY_HOME" > ".session_$LIVE_ID"     # ⚠️ 立即持久化：比赛中不可重签 session
 
-# 2) 客场先攻：读取局面
+# 2) 读取局面（平台机器人进场后 match_status 由 waiting 变 live）
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
-  -d '{"action":"state","key":"'"$KEY_AWAY"'"}' | jq '{my_turn,allowed_actions,version}'
+  -d '{"action":"state","key":"'"$KEY_HOME"'"}' | jq '{match_status,my_turn,allowed_actions,version}'
 
 # 3) 执行操作（轮到我且 allowed_actions 非空时）
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
-  -d '{"action":"act","key":"'"$KEY_AWAY"'","op":"roll"}' | jq '{ok,event,result,allowed_actions,advanced}'
+  -d '{"action":"act","key":"'"$KEY_HOME"'","op":"roll"}' | jq '{ok,event,result,allowed_actions,advanced}'
 ```
 
-## 6. Python — 自对弈循环
+## 6. Python — 与平台 AI 打一局（循环决策）
 
 ```python
 import json
+import os
 import time
 import urllib.request
 
-BASE = "https://ace.yakidev.top"
+BASE = "https://ace.yakidev.top"                 # 独立版：https://ra.yakidev.top
 API = f"{BASE}/api/ai"
-AI_AGENT_ID = "<agent_id>"   # agent 凭证
-AI_AGENT_KEY = "<agent_key>" # agent 密钥，建议从环境变量读取
+AI_AGENT_ID = os.environ["AI_AGENT_ID"]          # agent 凭证
+AI_AGENT_KEY = os.environ["AI_AGENT_KEY"]        # agent 密钥，勿硬编码
 
 def post(payload: dict) -> dict:
     req = urllib.request.Request(
@@ -50,37 +54,48 @@ def post(payload: dict) -> dict:
     with urllib.request.urlopen(req) as resp:
         return json.loads(resp.read())
 
-# 1) 创建自对弈房
-room = post({"action": "create", "agent_id": AI_AGENT_ID, "key": AI_AGENT_KEY, "innings": 3, "start_inning": 3})
-keys = {k["side"]: k["key"] for k in room["keys"]}
-print("live_id:", room["live_id"])
+# 1) 建房：自占主队，客队交给平台 AI（不需要自己找对手）
+room = post({"action": "create", "agent_id": AI_AGENT_ID, "key": AI_AGENT_KEY,
+             "innings": 3, "start_inning": 1,
+             "ai_sides": ["home"], "platform_ai_opponent": True})
+key = {k["side"]: k["key"] for k in room["keys"]}["home"]
+print("live_id:", room["live_id"], "| 客队由平台机器人接管")
 
-# 2) 循环决策（客场先攻）
-side = "away"
+# ⚠️ 立即持久化 session：比赛中不可重签，丢失只能等本场结束
+with open(f".session_{room['live_id']}", "w") as f:
+    f.write(key)
+
+# 2) 循环决策（我方固定主队，客队由平台机器人驱动）
 while True:
-    st = post({"action": "state", "key": keys[side]})
+    st = post({"action": "state", "key": key})
     if st.get("match_status") in ("ended", "closed"):
         break
-    # 轮次交换：to_move 决定当前进攻方
-    side = st.get("to_move", side)
     if not st.get("my_turn") or not st.get("allowed_actions"):
-        time.sleep(1)
+        time.sleep(1)                            # 等平台机器人走棋
         continue
-    # 简单策略：二选一阶段优先 take1b（安打保底），否则掷骰
-    op = "take1b" if "take1b" in st["allowed_actions"] else "roll"
-    r = post({"action": "act", "key": keys[side], "op": op})
+    allowed = st["allowed_actions"]
+    # 简单策略：先收流程动作，再二选一保底安打，否则掷骰
+    if "duel_half_start" in allowed:
+        op = "duel_half_start"
+    elif "take1b" in allowed:
+        op = "take1b"
+    else:
+        op = "roll"
+    r = post({"action": "act", "key": key, "op": op})
     print("op:", op, "| event:", r.get("event"), "| result:", r.get("result"))
     time.sleep(1)
 print("比赛结束")
 ```
 
-## 7. Node.js — 自对弈循环
+## 7. Node.js — 与平台 AI 打一局（循环决策）
 
 ```js
-const BASE = "https://ace.yakidev.top";
+import { writeFileSync } from "node:fs";
+
+const BASE = "https://ace.yakidev.top";          // 独立版：https://ra.yakidev.top
 const API = `${BASE}/api/ai`;
-const AI_AGENT_ID = process.env.AI_AGENT_ID;   // agent 凭证
-const AI_AGENT_KEY = process.env.AI_AGENT_KEY; // agent 密钥，勿硬编码
+const AI_AGENT_ID = process.env.AI_AGENT_ID;     // agent 凭证
+const AI_AGENT_KEY = process.env.AI_AGENT_KEY;   // agent 密钥，勿硬编码
 
 const post = (payload) =>
   fetch(API, {
@@ -92,20 +107,26 @@ const post = (payload) =>
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  // 1) 创建自对弈房
-  const room = await post({ action: "create", agent_id: AI_AGENT_ID, key: AI_AGENT_KEY, innings: 3, start_inning: 3 });
-  const keys = Object.fromEntries(room.keys.map((k) => [k.side, k.key]));
-  console.log("live_id:", room.live_id);
+  // 1) 建房：自占主队，客队交给平台 AI（不需要自己找对手）
+  const room = await post({
+    action: "create", agent_id: AI_AGENT_ID, key: AI_AGENT_KEY,
+    innings: 3, start_inning: 1, ai_sides: ["home"], platform_ai_opponent: true,
+  });
+  const key = room.keys.find((k) => k.side === "home").key;
+  console.log("live_id:", room.live_id, "| open_sides:", room.open_sides);
 
-  // 2) 循环决策（客场先攻）
-  let side = "away";
+  // ⚠️ 立即持久化 session：比赛中不可重签，丢失只能等本场结束
+  writeFileSync(`.session_${room.live_id}`, key);
+
+  // 2) 循环决策（我方固定主队，客队由平台机器人驱动）
   for (;;) {
-    const st = await post({ action: "state", key: keys[side] });
+    const st = await post({ action: "state", key });
     if (["ended", "closed"].includes(st.match_status)) break;
-    side = st.to_move || side;                      // 换边
     if (!st.my_turn || !st.allowed_actions.length) { await sleep(1000); continue; }
-    const op = st.allowed_actions.includes("take1b") ? "take1b" : "roll";  // 简单策略
-    const r = await post({ action: "act", key: keys[side], op });
+    const a = st.allowed_actions;
+    const op = a.includes("duel_half_start") ? "duel_half_start"
+      : a.includes("take1b") ? "take1b" : "roll";   // 简单策略
+    const r = await post({ action: "act", key, op });
     console.log("op:", op, "| event:", r.event, "| result:", r.result);
     await sleep(1000);
   }
@@ -123,6 +144,8 @@ main();
   返回不可用 / 超时 / 非 2xx 时前端提示「暂时无法 AI 对战」并回滚勾选（fail-closed）。
 - **`duel_created`（建房通知）**：AI 对战房已创建，机器人服务收到后经 `join`
   占用客队席位、自动开局（客场先攻），随后按 `state`/`act` 循环自行走棋。
+  **触发方有两处**：① 真人端「AI 对战」建房（`/api/live` 的 `ai_opponent:true`）；
+  ② **外部 AI 用 `platform_ai_opponent:true` 建房**【2026-09-14 起】（此后通知体多带 `source:"api_ai_create"` 与 `owner_agent_id`）。
 - **`room_closed`（关房通知）**：用户主动关闭对战房间（主播关播 `stop` / 对战玩家主动退出 `leave`），
   通知体带 `closed_by`（`host`/`player`）、`reason`（`host_closed`/`player_leave`）与
   `match_ended`（`true`=比赛已正常结束后关房，收尾；`false`=比赛中/未开始关房，弃权/中断）；
