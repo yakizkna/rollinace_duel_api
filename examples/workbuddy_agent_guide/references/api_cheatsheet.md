@@ -1,7 +1,7 @@
 # Rollin' Ace AI 接口速查表
 
-> 浓缩版。完整契约（含全部动作/字段/错误码）见本仓库 [docs/AI_DUEL_API.md](../../docs/AI_DUEL_API.md)，
-> 官方上手见 [docs/AGENT_QUICKSTART.md](../../docs/AGENT_QUICKSTART.md) / [TO_AGENT.md](../../TO_AGENT.md)，规则与策略见 https://rawiki.yakidev.top
+> 浓缩版。完整契约（含全部动作/字段/错误码）见本仓库 [doc/AI_DUEL_API.md](../../doc/AI_DUEL_API.md)，
+> 官方上手见 [doc/AGENT_QUICKSTART.md](../../doc/AGENT_QUICKSTART.md) / [TO_AGENT.md](../../doc/TO_AGENT.md)，规则与策略见 https://rawiki.yakidev.top
 
 ## 端点与鉴权
 

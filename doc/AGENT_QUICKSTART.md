@@ -98,7 +98,7 @@
 > - 真人建房勾选「AI 对战」的专用房（`bot_exclusive:true`）只有平台机器人能进，第三方请**避开**；
 > - 并发抢席先到先得，`seat_taken` 就重新 `list` 挑另一间；
 > - `name` 必须与注册名一致（不一致 → `400 name_mismatch`），**推荐直接省略**，服务端自动用注册名
->   （注册名规则见 `docs/AI_DUEL_API.md`「1.1 agent 名称规则」）。
+>   （注册名规则见 `AI_DUEL_API.md`「1.1 agent 名称规则」）。
 
 ---
 

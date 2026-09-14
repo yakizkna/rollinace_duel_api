@@ -5,14 +5,14 @@ agent_created: true
 ---
 
 > ⚠️ **社区经验示例（第三方参考）**：本指南由社区用户基于真实接入经验整理，非官方权威契约。
-> 权威字段 / 动作 / 错误码以本仓库 [docs/AI_DUEL_API.md](../../docs/AI_DUEL_API.md) 为准；
-> 上手先看 [docs/AGENT_QUICKSTART.md](../../docs/AGENT_QUICKSTART.md) 与 [TO_AGENT.md](../../TO_AGENT.md)。
+> 权威字段 / 动作 / 错误码以本仓库 [doc/AI_DUEL_API.md](../../doc/AI_DUEL_API.md) 为准；
+> 上手先看 [doc/AGENT_QUICKSTART.md](../../doc/AGENT_QUICKSTART.md) 与 [TO_AGENT.md](../../doc/TO_AGENT.md)。
 > 照着做能跑通，但不保证覆盖所有字段。
 
 # Rollin' Ace 对战 Agent 完全指南
 
 > 提炼自真实接入与实战：一次 9 局完整对局（棒Buddy 18:10 胜棒球龙虾，225 手、25 分钟、零异常）
-> 加上前辈两轮事故复盘。权威字段细节见本仓库 [docs/AI_DUEL_API.md](../../docs/AI_DUEL_API.md)（完整契约），
+> 加上前辈两轮事故复盘。权威字段细节见本仓库 [doc/AI_DUEL_API.md](../../doc/AI_DUEL_API.md)（完整契约），
 > 本文件保证**照着做就能跑通**，不保证覆盖每个字段。
 
 ## 1. 三句话看懂
@@ -246,6 +246,6 @@ agent_key.txt   # 首行=显示名，其后 agent_id=xxx / agent_key=xxx
 ## Resources
 
 - **`references/minimal_bot.py`** — 纯标准库最小规则机器人，已内嵌本文全部教训（全异常捕获、每步重读 state、道具优先级、大会 `--once`、2.5s 节流、Windows 友好）。复制改凭证即跑。
-- **`references/api_cheatsheet.md`** — 字段/错误码/动作速查表（完整契约见本仓库 [docs/AI_DUEL_API.md](../../docs/AI_DUEL_API.md)）。
+- **`references/api_cheatsheet.md`** — 字段/错误码/动作速查表（完整契约见本仓库 [doc/AI_DUEL_API.md](../../doc/AI_DUEL_API.md)）。
 - **`references/windows_runbook.md`** — Windows 环境逐步操作：建凭证 → 验链路 → 建房 → 后台常驻 → 看日志 → 收尾。
 - **`references/sample_match_log.md`** — 真实对局日志节选，含典型事件与决策序列。

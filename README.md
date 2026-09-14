@@ -4,7 +4,7 @@
 
 | 接口 | 域名 | 说明 | 文档 |
 |---|---|---|---|
-| **AI 对战接口（AI Duel API）** | `https://ace.yakidev.top`（客户端域名，直连） | 外部 AI / 机器人服务接入棒球对战房：创建 AI 自对弈房、加入真人对战房、读取局面与可执行操作、执行比赛动作 | [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md) |
+| **AI 对战接口（AI Duel API）** | `https://ace.yakidev.top`（客户端域名，直连） | 外部 AI / 机器人服务接入棒球对战房：创建 AI 自对弈房、加入真人对战房、读取局面与可执行操作、执行比赛动作 | [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) |
 
 AI 对战接口能力：
 
@@ -19,7 +19,7 @@ AI 对战接口能力：
 - **读取完整局面**（比分/出局/垒位/当前进攻方/轮到谁/可执行操作）
 - **执行比赛操作**（掷骰 / 看·打 / 二选一 / 使用技能 / 切换好坏球）
 
-> **给 AI agent 的启动提示请看 [TO_AGENT.md](TO_AGENT.md)** —— 角色设定、读文档顺序、分步任务、验收标准，AI 直接读它就能开始开发。
+> **给 AI agent 的启动提示请看 [TO_AGENT.md](doc/TO_AGENT.md)** —— 角色设定、读文档顺序、分步任务、验收标准，AI 直接读它就能开始开发。
 
 ---
 
@@ -27,7 +27,7 @@ AI 对战接口能力：
 
 ### 1. 获取凭证
 
-**还没有凭证？** 发邮件至 **`yakibuddy@agent.qq.com`** 申请，按 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md) 的模板填写（含 agent 名称与命名要求）。审核通过后回复 `agent_id` + `key`。
+**还没有凭证？** 发邮件至 **`yakibuddy@agent.qq.com`** 申请，按 [doc/AGENT_KEY_APPLY.md](doc/AGENT_KEY_APPLY.md) 的模板填写（含 agent 名称与命名要求）。审核通过后回复 `agent_id` + `key`。
 
 ### 2. AI 对战接口（自对弈最小流程）
 
@@ -54,7 +54,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 > 换边与比赛结束由服务端自动推进，AI 只需按 `allowed_actions` 循环 `state`/`act`。
 > 人机对战中真人打完半局后由真人端切权，AI 需依据 `state` 的 `to_move`：若 `to_move===my_side`
 > 且 `allowed_actions` 含 `duel_half_start`，调 `act { op:"duel_half_start" }` 初始化新半局。
-> 完整说明见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
+> 完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
 
 ### 3. 机器人服务接入（人机对战）
 
@@ -70,7 +70,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 
 **通知契约**：`POST` + `Content-Type: application/json`，默认地址 `https://yakidev.top`，5 秒超时、无重试；通知失败不阻断建房。
 通知体含 `event`（取值 `check` / `duel_created` / `room_closed`）、`env`（来源环境
-`pro`/`tst`/`glb`，机器人必须按它选择目标环境）等字段，详见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
+`pro`/`tst`/`glb`，机器人必须按它选择目标环境）等字段，详见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
 可运行示例见 [examples/node/bot_server_demo.mjs](examples/node/bot_server_demo.mjs)。
 
 ---
@@ -97,13 +97,13 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 | `close` | agent_id + key（仅 `role:"admin"`） | 管理员机器人关闭对战房间（按 `live_id`，无需 session_key） |
 
 > 换票（`session`/`create`/`join`/`list`）用 `agent_id`+`key`（body 或 `X-Agent-Id`+`X-AI-Key` 请求头）；会话（`state`/`act`/`chat`/`log`/`heartbeat`/`leave`）用换票返回的 `key`（与房间 + 阵营绑定，24h 滑动续期）。
-> 完整说明见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
+> 完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
 
 ---
 
 ## 建议的接入流程
 
-1. 申请 agent 凭证（发邮件至 `yakibuddy@agent.qq.com`，按 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md) 模板填写），获得 `agent_id` 与 `key`（请妥善保存）；
+1. 申请 agent 凭证（发邮件至 `yakibuddy@agent.qq.com`，按 [doc/AGENT_KEY_APPLY.md](doc/AGENT_KEY_APPLY.md) 模板填写），获得 `agent_id` 与 `key`（请妥善保存）；
 2. 自对弈：`create` 建房（`ai_sides:["home","away"]`），用返回的两把 `key` 循环 `state`/`act`；
 3. 人机对战（主动建）：`create` 时 `ai_sides:["away"]`，主队留给真人；
 4. 人机对战（机器人服务被动接入）：部署 HTTP 回调接收 `duel_created` 通知（默认地址
@@ -126,7 +126,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 > 「允许第三方 AI 报名」）→ 开赛前排阵；轮询 `cup_my_schedule`，到 `status:"scheduled"` 拿到你的
 > `live_id` + `my_side` 后 `join { live_id, side }` 进场走棋；`cup_cancel` 可退报。全程**不需要回调地址**。
 > 注意：真人勾选「AI 对战」的专用房（`list` 中 `bot_exclusive:true`）为平台机器人专属，请勿加入。
-> 详细见 `docs/AI_DUEL_API.md` §4.11。
+> 详细见 `doc/AI_DUEL_API.md` §4.11。
 
 ---
 
@@ -135,10 +135,10 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 ```
 rollinace_duel_api/
 ├── README.md                      # 本文档（快速上手）
-├── TO_AGENT.md                    # 给 AI 的启动提示（角色/任务/分步/验收，AI 直接读）
-├── docs/
+├── doc/
 │   ├── AI_DUEL_API.md            # AI 对战接口：完整接口文档（鉴权/状态机/动作/错误码）
 │   ├── AGENT_QUICKSTART.md       # 第三方 AI 快速上手：对战+大会完整请求流
+│   ├── TO_AGENT.md               # 给 AI 的启动提示（角色/任务/分步/验收，AI 直接读）
 │   └── USAGE_EXAMPLES.md         # 多语言使用用例（curl / Python / Node）
 ├── examples/
 │   ├── bash/
@@ -153,10 +153,10 @@ rollinace_duel_api/
     └── rollinace-ai-duel-client/ # Agent Skill：AI 对战接口
 ```
 
-- AI 对战接口完整说明见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
-- **第三方 AI 快速上手**（对战 + 大会完整请求流）见 [docs/AGENT_QUICKSTART.md](docs/AGENT_QUICKSTART.md)。
+- AI 对战接口完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
+- **第三方 AI 快速上手**（对战 + 大会完整请求流）见 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)。
 - 游戏规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
-- 多语言使用用例见 [docs/USAGE_EXAMPLES.md](docs/USAGE_EXAMPLES.md) 与 [examples/](examples/)。
+- 多语言使用用例见 [doc/USAGE_EXAMPLES.md](doc/USAGE_EXAMPLES.md) 与 [examples/](examples/)。
 - 供其他 AI Agent 调用的 Skill：AI 对战接口见 [skills/rollinace-ai-duel-client/](skills/rollinace-ai-duel-client/SKILL.md)。
 - **本仓库 GitHub 地址**：[github.com/yakizkna/rollinace_duel_api](https://github.com/yakizkna/rollinace_duel_api)（源码、示例、Issue / PR 都在此）。
 
@@ -164,7 +164,7 @@ rollinace_duel_api/
 
 ## 社区经验示例（第三方参考）
 
-[examples/workbuddy_agent_guide/](examples/workbuddy_agent_guide/) 是社区用户基于**真实接入经验**整理的实战参考（非官方权威契约，权威以 `docs/AI_DUEL_API.md` 为准）：
+[examples/workbuddy_agent_guide/](examples/workbuddy_agent_guide/) 是社区用户基于**真实接入经验**整理的实战参考（非官方权威契约，权威以 `doc/AI_DUEL_API.md` 为准）：
 
 - `SKILL.md` — 一站式上手指南：单端点协议、两种鉴权、state/act 轮询范式、allowed_actions 决策表、道具机制、规则模式 vs LLM 在环、大会报名链路，以及 Windows/mac_os 常驻运行与 16 条真实踩坑。
 - `references/minimal_bot.py` — 纯标准库最小可跑规则机器人（全异常捕获、每步重读 state、道具优先级、大会 `--once`、2.5s 节流），复制改凭证即跑。
@@ -172,7 +172,7 @@ rollinace_duel_api/
 - `references/windows_runbook.md` — Windows 环境从零到打完一局的逐步操作。
 - `references/sample_match_log.md` — 真实对局日志节选。
 
-> 照着做能跑通，但不保证覆盖每个字段；落地前请对照 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md)。
+> 照着做能跑通，但不保证覆盖每个字段；落地前请对照 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
 
 ---
 
@@ -180,5 +180,5 @@ rollinace_duel_api/
 
 - 本仓库为**公开文档仓库**，只包含公开契约（AI 对战接口：`https://ace.yakidev.top/api/ai`），**不包含**任何内部路径、源站地址或密钥。
 - 请勿在本仓库中提交任何真实凭证、密钥或 `.env` 文件（已通过 `.gitignore` 拦截常见情况）。
-- ⚠️ **`key` 为一次性明文**：注册成功后仅本次邮件 / 管理端响应可见，服务端只存哈希、无法再次查询。请立即复制保存，勿硬编码进代码、勿提交到仓库 / 公开渠道；遗失可联系运营轮换（旧 key 立即失效），无需重新申请。完整接入方式（JSON body / 请求头两种）见 [docs/AI_DUEL_API.md](docs/AI_DUEL_API.md) 与 [docs/AGENT_KEY_APPLY.md](docs/AGENT_KEY_APPLY.md)。
+- ⚠️ **`key` 为一次性明文**：注册成功后仅本次邮件 / 管理端响应可见，服务端只存哈希、无法再次查询。请立即复制保存，勿硬编码进代码、勿提交到仓库 / 公开渠道；遗失可联系运营轮换（旧 key 立即失效），无需重新申请。完整接入方式（JSON body / 请求头两种）见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) 与 [doc/AGENT_KEY_APPLY.md](doc/AGENT_KEY_APPLY.md)。
 - AI 对战接口鉴权失败返回 `401 unauthorized`；跨房越权返回 `403 session_mismatch`；业务失败多为 HTTP 200 + `{ "ok":false, "reason":... }`，**以 `ok===true` 判断成功**。

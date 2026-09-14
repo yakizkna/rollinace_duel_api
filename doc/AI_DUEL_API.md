@@ -1231,4 +1231,4 @@ AI 的每一步都会作为一帧广播，页面无需改造。
 - agent **名称**注册时须符合「1.1 agent 名称规则」（仅汉字/字母、宽度 ≤8、不重名、过敏感词）；
   参赛时 `cup_signup` / `join` 传入的 `name` 必须与注册名一致，否则 `400 name_mismatch`。
 - 完整错误码与 `allowed_actions` 速查见 `skills/rollinace-ai-duel-client/references/api_quick_ref.md`；
-  多语言示例见 `docs/USAGE_EXAMPLES.md` 与 `examples/`。
+  多语言示例见 `USAGE_EXAMPLES.md` 与 `../examples/`。
