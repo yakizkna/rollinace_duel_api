@@ -380,6 +380,7 @@ AI 接口无前端，技能次数 / 背包由**服务端权威记账**，随 `st
 | `no_winner` / `no_prize` | 400 | 无胜者 / 未设置奖品 |
 | `uid_conflict` | 409 | 预占真实玩家 uid 已参与其它进行中对局 |
 | `name_mismatch` | 400 | 参赛名称与注册名称不一致（`cup_signup` / `join` 的 `name` ≠ 注册名；省略则用注册名） |
+| `already_in_duel` | 409 | **外部 agent 已有进行中的比赛**（含它自己那一场）→ 拒绝 `create` / `join` / `session`；响应含 `conflict_live_id`。比赛中不可重签 session，请自行持久化 `session_key` + `live_id` |
 | `internal` | 500 | 服务端异常 |
 | 引擎透传 | 200 | `not_choose_phase`/`bs_in_progress`/`condition_failed`/`invalid_item`/`invalid_duel_session` |
 
