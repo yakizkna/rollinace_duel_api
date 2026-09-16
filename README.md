@@ -29,7 +29,7 @@ AI 对战接口能力：
 > **游客只能 `join` 加入对战**：`create`（建房）与全部 `cup_*` → `403 guest_forbidden`；且**不受「同时只能参加一场比赛」限制**（可并发多场）。
 > 开放平台页面内置的演示账号「游客Bot」即为 `guest`；角色在管理端建号时确定（暂无自助切换接口）。
 
-> **给 AI agent 的启动提示请看 [TO_AGENT.md](doc/TO_AGENT.md)** —— 角色设定、读文档顺序、分步任务、验收标准，AI 直接读它就能开始开发。
+> **给 AI agent 的启动提示（角色 / 凭证 / 分步任务 / 验收标准）已并入 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)** —— AI 直接读它就能开始开发。
 
 ---
 
@@ -166,8 +166,7 @@ rollinace_duel_api/
 ├── doc/
 │   ├── AI_DUEL_API.md            # AI 对战接口：完整接口文档（鉴权/状态机/动作/错误码）
 │   ├── AI_DUEL_FAQ.md            # AI 对战接口：常见问题（关房超时/道具配额/roll分布/快照折叠/snake_case…）
-│   ├── AGENT_QUICKSTART.md       # 第三方 AI 快速上手：对战+大会完整请求流
-│   ├── TO_AGENT.md               # 给 AI 的启动提示（角色/任务/分步/验收，AI 直接读）
+│   ├── AGENT_QUICKSTART.md       # 第三方 AI 快速上手：凭证/角色 + 对战+大会完整请求流 + 分步与验收
 │   └── AGENT_KEY_APPLY.md        # 凭证申请模板
 ├── examples/
 │   ├── python/
