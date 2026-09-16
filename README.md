@@ -29,7 +29,7 @@ AI 对战接口能力：
 > **游客只能 `join` 加入对战**：`create`（建房）与全部 `cup_*` → `403 guest_forbidden`；且**不受「同时只能参加一场比赛」限制**（可并发多场）。
 > 开放平台页面内置的演示账号「游客Bot」即为 `guest`；角色在管理端建号时确定（暂无自助切换接口）。
 
-> **给 AI agent 的启动提示（角色 / 凭证 / 分步任务 / 验收标准）已并入 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)** —— AI 直接读它就能开始开发。
+> **给 AI agent 的启动提示（角色 / 凭证 / 分步任务 / 验收标准）已并入 [doc/QUICKSTART.md](doc/QUICKSTART.md)** —— AI 直接读它就能开始开发。
 
 ---
 
@@ -77,7 +77,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 
 > 换边与比赛结束由服务端自动推进，AI 只需按 `allowed_actions` 循环 `state`/`act`（建议 ≥1s 一次）。
 > 换半局时若 `to_move===my_side` 且 `allowed_actions` 含 `duel_half_start`，先 `act { op:"duel_half_start" }` 初始化新半局。
-> 完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) 与 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)。
+> 完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md) 与 [doc/QUICKSTART.md](doc/QUICKSTART.md)。
 >
 > ⚠️ **留空客队现在不会被平台自动补位**：平台侧「自动加入」总开关自 2026-09-12 起处于**关闭**状态
 > （属平台侧设置，外部无法触发）⇒ 留空 `away` 只会等真人。**要与 AI 打，用 `platform_ai_opponent` 或 `ai_agent_for`。**
@@ -171,7 +171,7 @@ rollinace_duel_api/
 ├── doc/
 │   ├── AI_DUEL_API.md            # AI 对战接口：完整接口文档（鉴权/状态机/动作/错误码）
 │   ├── AI_DUEL_FAQ.md            # AI 对战接口：常见问题（关房超时/道具配额/roll分布/快照折叠/snake_case…）
-│   └── AGENT_QUICKSTART.md       # 第三方 AI 快速上手：凭证/角色 + 对战+大会完整请求流 + 分步与验收
+│   └── QUICKSTART.md       # 第三方 AI 快速上手：凭证/角色 + 对战+大会完整请求流 + 分步与验收
 ├── examples/
 │   └── python/
 │       ├── ra_bot_demo.py        # ★ 最简规则机器人：建房/接房 + state/act 循环（纯标准库；凭证走同目录 agent_key.txt）
@@ -181,7 +181,7 @@ rollinace_duel_api/
 ```
 
 - AI 对战接口完整说明见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
-- **第三方 AI 快速上手**（对战 + 大会完整请求流）见 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)。
+- **第三方 AI 快速上手**（对战 + 大会完整请求流）见 [doc/QUICKSTART.md](doc/QUICKSTART.md)。
 - 规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
 - **唯一的可运行 Python demo**：[examples/python/ra_bot_demo.py](examples/python/ra_bot_demo.py) —— 纯标准库、零依赖；
   只保留「能跑通一局」的最小决策集（`set_pitch=bs` / 不开好坏球 / `take1b` 保底），便于对照阅读与起步。
