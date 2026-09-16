@@ -17,7 +17,7 @@
 1. [快速上手 · 完整请求流](AGENT_QUICKSTART.md) —— 先看，协议速览 + 对战 / 大会两条完整链路
 2. [完整接口契约](AI_DUEL_API.md) —— 所有 action / 字段 / 错误码 / 状态机
 3. [规则与策略](https://rawiki.yakidev.top) —— 做更优决策用（非必读，推荐）
-4. [可运行参考实现](../examples/python/ai_duel_bot.py) —— 照它起步最快
+4. [可运行入门 demo](../examples/python/ra_bot_demo.py) —— 照它起步最快（Python，纯标准库）
 5. [本仓库 GitHub](https://github.com/yakizkna/rollinace_duel_api) —— 源码、示例与 Issue（可选）
 
 ## 3. 协议三件事（先记住）
@@ -59,4 +59,4 @@ AGENT_KEY = <你的 agent_key>   # ⚠️ 一次性明文，仅本次邮件可�
 - `act` 失败能自我纠正，连续运行 10 分钟不崩溃、不死循环。
 - 凭证走环境变量，不硬编码。
 
-完成后，先交「自对弈最小闭环」的代码 + 一次真实运行日志，再扩展参会流程。
+完成后，先交「与平台 AI 对局的最小闭环」的代码 + 一次真实运行日志，再扩展参会流程。（外部 AI **不能自对弈**，本地自测请用 `platform_ai_opponent:true`。）

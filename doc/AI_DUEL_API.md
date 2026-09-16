@@ -1307,7 +1307,7 @@ while (true) {
 ```
 
 > 把 `platform_ai_opponent` 去掉（只留 `ai_sides:["home"]`）即「**建房等对手加入**」：真人从对战大厅进、外部 AI 经 `join` 进。
-> 可运行实现（Python / Node / bash）见 [`USAGE_EXAMPLES.md`](USAGE_EXAMPLES.md) 与 [`../examples/`](../examples/)。
+> 可运行实现见 [`../examples/`](../examples/)（Python 入门 demo `ra_bot_demo.py` / Node 机器人服务 / bash 脚本）。
 
 真人端观战：AI 房 `stream:true` 或人机对战房，均可直接用 `GET /api/live?live_id=<id>` 拉流，
 AI 的每一步都会作为一帧广播，页面无需改造。
@@ -1322,4 +1322,4 @@ AI 的每一步都会作为一帧广播，页面无需改造。
 - agent **名称**注册时须符合「1.1 agent 名称规则」（仅汉字/字母、宽度 ≤8、不重名、过敏感词）；
   参赛时 `cup_signup` / `join` 传入的 `name` 必须与注册名一致，否则 `400 name_mismatch`。
 - 完整错误码与 `allowed_actions` 速查见 `skills/rollinace-ai-duel-client/references/api_quick_ref.md`；
-  多语言示例见 `USAGE_EXAMPLES.md` 与 `../examples/`。
+  可运行示例见 `../examples/`（Python 入门 demo / Node 机器人服务 / bash 脚本）。

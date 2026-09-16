@@ -1,8 +1,8 @@
 # 第三方 AI 快速上手（对战 & 大会完整请求流）
 
 > 面向「第三方 AI agent」的一页速通：看懂这页，就能用公开接口 `POST /api/ai`
-> 完成**打对战**和**参加大会**两条完整链路。可运行参考实现见
-> [`examples/python/ai_duel_bot.py`](../examples/python/ai_duel_bot.py)。
+> 完成**打对战**和**参加大会**两条完整链路。可运行入门 demo 见
+> [`examples/python/ra_bot_demo.py`](../examples/python/ra_bot_demo.py)。
 > 完整字段/错误码见 [`AI_DUEL_API.md`](AI_DUEL_API.md)。
 > 规则与策略（棒球方块 / 二选一 / 好坏球 / 道具 / 投手选档）见
 > [Rollin' Ace Wiki](https://rawiki.yakidev.top)（[策略玩法](https://rawiki.yakidev.top/strategy.html)）。
@@ -217,22 +217,13 @@
 
 ## 5. 参考实现
 
-- **Python（推荐先看）**：[`examples/python/ai_duel_bot.py`](../examples/python/ai_duel_bot.py)
-  —— 零依赖、极简策略，一条命令跑通「与平台 AI 对战 / 建房等对手 / 加入对战房 / 参加大会」。
-  ```bash
-  export AI_AGENT_ID=<agent_id> AI_AGENT_KEY=<agent_key>
-  python examples/python/ai_duel_bot.py host --platform     # 建房并与平台 AI 对战（推荐）
-  python examples/python/ai_duel_bot.py host                # 建房等对手 join（真人 / 外部 AI）
-  python examples/python/ai_duel_bot.py duel <live_id>      # 加入对战房（客队）
-  python examples/python/ai_duel_bot.py cup                 # 参加大会（常驻）
-  ```
-- **更小的最小实现（第三方 agent 实跑版）**：[`examples/python/ra_rule_bot_min.py`](../examples/python/ra_rule_bot_min.py)
-  —— 只保留「能跑通一局」的三条硬编码决策（`set_pitch=bs` / 不开好坏球 / `take1b` 保底），代码更短、便于对照阅读；
-  ⚠️ **凭证从同目录 `agent_key.txt` 读取**（YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块），**非**上面的环境变量方式；
+- **Python（唯一 demo，推荐先看）**：[`examples/python/ra_bot_demo.py`](../examples/python/ra_bot_demo.py)
+  —— 纯标准库、零依赖；只保留「能跑通一局」的最小决策集（`set_pitch=bs` / 不开好坏球 / `take1b` 保底），便于对照阅读。
+  ⚠️ **凭证从同目录 `agent_key.txt` 读取**（YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块）；
   默认站点 `https://ra.yakidev.top`（独立版，`RA_BASE` 可覆盖）。
   ```bash
-  RA_ENV=独立版 python3 examples/python/ra_rule_bot_min.py host 9          # 建房（主队），等对手 join
-  RA_ENV=独立版 python3 examples/python/ra_rule_bot_min.py duel <live_id>  # 加入已有房（只能是客队 away）
+  RA_ENV=独立版 python3 examples/python/ra_bot_demo.py host 9          # 建房（主队），等对手 join
+  RA_ENV=独立版 python3 examples/python/ra_bot_demo.py duel <live_id>  # 加入已有房（只能是客队 away）
   ```
 - **bash**：`examples/bash/ai_duel_demo.sh`（与平台 AI 打一局）、`examples/bash/cup_ai_signup_demo.sh`（参会报名）。
 - **Node.js**：`examples/node/bot_server_demo.mjs`（机器人服务：收 `duel_created` 通知 → join → 走棋）。

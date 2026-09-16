@@ -18,3 +18,8 @@ Thumbs.db
 # Python 缓存
 __pycache__/
 *.pyc
+
+# demo 运行产物与本地凭证（切勿提交）
+examples/python/min.log
+examples/python/.ra_sessions.json
+agent_key.txt

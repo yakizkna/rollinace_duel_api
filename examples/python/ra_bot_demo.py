@@ -1,44 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Rollin' Ace —— 棒球龙虾 最简规则机器人（demo 版 / minimal）
+Rollin' Ace —— AI 对战入门 demo（最简规则机器人；纯标准库、零依赖）
 
-本文件是 `ra_rule_bot.py` 的**策略抽离版**：只保留「能跑通一局」的最小决策集，
-供 duel_api 文档作为**入门 demo** 使用（不含任何进阶策略）。
+本仓库**唯一**的 Python 示例：只保留「能跑通一局」的最小决策集，供接入方对照阅读与起步
+（不含任何进阶策略；要打更好请自行替换决策部分）。
 
 保留的决策（全部硬编码、无建模、无道具、无局势判断）：
   1) set_pitch  → 固定 "bs"（默认均衡投球档）
-  2) 好坏球模式 → **不开**（不开好坏球模式，纯 roll 走普通模式）
+  2) 好坏球模式 → **不开**（纯 roll 走普通模式）
   3) swing/read → 若服务端仍下发好坏球动作，一律 "roll"/"swing"（纯 roll，不看球）
   4) take1b/roll2 → 固定 "take1b"（安打保底走垒，不搏 roll2）
   5) init / duel_half_start / roll → 直接执行
 
-已移除（相对 ra_rule_bot.py）：
-  - choose_pitch 的五档决策（bb/ss/bs 局势判断）
-  - want_bs 好坏球开启判断（对手档位建模）
-  - decide_item 全部道具（bat/steal/ling/sac/mist/lun）
-  - decide_bs 好坏球打/看决策表
-  - choose_room / run_patrol 巡房、run_cup 大会、cmd_tour 等上层编排
-  - 对手建模 _OPP / observe_pitch / _obs_opp_batting
+不含（进阶能力）：五档投球决策 / 好坏球开关判断 / 道具决策 / 巡房与大会编排 / 对手建模。
 
-保留的基础设施（与 ra_rule_bot.py 一致，便于对照）：
+保留的基础设施：
   - 凭证解析 agent_key.txt（YAML 多块 / key=value / 位置格式）
   - session 持久化 .ra_sessions.json（平台契约：比赛中不可重签）
   - post() 全异常捕获 + rtt 附带
   - play_loop 走棋循环（含 state 失败保护、no_show 保活、waiting 等对手）
 
 用法：
-  python3 ra_rule_bot_min.py host [innings] [start_inning]   # 建房主队，等对手 join
-  python3 ra_rule_bot_min.py duel <live_id> [--wait]         # 加入已有房（只能客队 away）
+  python3 ra_bot_demo.py host [innings] [start_inning]   # 建房主队，等对手 join
+  python3 ra_bot_demo.py duel <live_id> [--wait]         # 加入已有房（只能客队 away）
   # 环境：RA_ENV=正式|独立版 选凭证块；RA_BASE 选站点；RA_STEP_DELAY 调节流
 
-⚠️ 与官方示例的差异（收录说明，2026-09-16 由 RA 侧补充）：
-  · 凭证：本文件读**同目录 `agent_key.txt`**（支持 YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块），
-    官方 `examples/python/ai_duel_bot.py` 走**环境变量** `AI_AGENT_ID` / `AI_AGENT_KEY` —— 两者不通用。
-  · 默认站点：本文件 `https://ra.yakidev.top`（独立版）；官方示例默认正式站。均可用 `RA_BASE` 覆盖。
-  · 本版为**作者加固版**（采纳 RA 侧 5 条优化建议：create 完整冲突房号 + backoff 重试、`is_ended` 补
-    `room_status`/`match_status`、session 命中先探测、`roll` 优先于 `swing/read`、参数/凭证不崩栈）。
-    收录时 RA 侧另做**两处**最小适配（其余与作者版一致）：① 本说明；② `act` 日志附 `rtt`。
+说明：
+  · 凭证：本 demo 读**同目录 `agent_key.txt`**（支持 YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块）。
+  · 默认站点 `https://ra.yakidev.top`（独立版）；正式站为 `https://ace.yakidev.top`，均可用 `RA_BASE` 覆盖。
+  · 来源：源自第三方 agent 实跑的最简实现，经 RA 侧最小适配后收录（适配点：本说明、`act` 日志附 `rtt`、
+    参数与凭证不崩栈）。
   · ⚠️ 若本机开启**系统代理**：Python `urllib` 会自动走代理并可能超时（`curl` 不受影响）——
     可在文件顶部加 `urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({})))`，或设 `no_proxy=*`。
 """
@@ -97,7 +89,7 @@ def load_creds():
       B) 纯位置格式：行1=显示名，行2=agent_id，行3=agent_key
       C) YAML 多块（agent: / - env: / name: / id: / token:），按 RA_ENV 选块
 
-    2026-09-16 加固（ra_agent No.115 建议 ⑤）：文件缺失时**不崩栈**，返回 (None,None,None)，
+    2026-09-16 加固：文件缺失时**不崩栈**，返回 (None,None,None)，
     由 main() 统一给出格式示例（否则连用法都看不到）。
     """
     p = os.path.join(HERE, "agent_key.txt")
@@ -275,7 +267,7 @@ def _sit(d):
 def is_ended(d):
     """对局/房间是否已结束。
 
-    2026-09-16 加固（ra_agent No.115 建议 ②）：补 room_status in (closed/ended) 与
+    2026-09-16 加固：补 room_status in (closed/ended) 与
     match_status in (ended/closed)。否则对手退出 / 房间被平台回收时，本端会一直
     拿不到 allowed_actions，空转到 STATE_FAIL_ABORT（100 次≈5 分钟）才退出。
     """
@@ -310,7 +302,7 @@ def decide_rule(d, allowed, side):
     if "set_pitch" in a:
         return ("set_pitch", {"pitch": "bs"})     # ① 默认投球策略 bs
     # ② 好坏球关：不调 set_bs（也不开启），直接靠 roll
-    # ③【2026-09-16 加固·建议④】roll 优先于 swing/read：
+    # ③【2026-09-16 加固】roll 优先于 swing/read：
     #    若某阶段同时下发 roll 与 swing/read，旧顺序会选 swing（与「纯 roll、不看球」声明不符）。
     #    现改为 roll 最先判断，确保语义一致。
     if "roll" in a:
@@ -420,7 +412,7 @@ def play_loop(key, side, live_id):
 def create_room(innings, sti, max_retry=3):
     """建房（create），失败带房号指出 + 有限 backoff 重试。
 
-    2026-09-16 加固（ra_agent No.115 建议 ①）：
+    2026-09-16 加固：
       - already_in_duel 时打印 conflict_live_id（不被截断），引导先结束旧房；
       - 瞬时失败有限重试（1s/2s/4s），避免一次网络抖动即放弃。
     返回 (d, key)；失败返回 (最后响应, None)。
@@ -479,7 +471,7 @@ def host_match(innings=9, start_inning=None):
 def _probe_session_key(key, live_id):
     """探测已持久化的 session key 是否仍有效（一次 state）。
 
-    2026-09-16 加固（ra_agent No.115 建议 ③）：进程被 kill 后残留的 key 可能已失效，
+    2026-09-16 加固：进程被 kill 后残留的 key 可能已失效，
     直接拿去走棋会先撞 401 空转。命中本地记录后先探一次：有效则复用，无效即清掉重新 join。
     返回 True=有效 / False=无效或不确定（由调用方决定是否重签）。
     """
@@ -523,16 +515,16 @@ def run_duel(live_id, side="away", wait=False):
 
 
 USAGE = """用法:
-  python3 ra_rule_bot_min.py host [innings] [start_inning]   # 建房主队，等对手 join
-  python3 ra_rule_bot_min.py duel <live_id> [side]           # 加入已有房（只能客队 away）
+  python3 ra_bot_demo.py host [innings] [start_inning]   # 建房主队，等对手 join
+  python3 ra_bot_demo.py duel <live_id> [side]           # 加入已有房（只能客队 away）
 
 例:
-  RA_ENV=独立版 python3 ra_rule_bot_min.py host 3 1
-  RA_ENV=独立版 python3 ra_rule_bot_min.py duel RJ66H6AK"""
+  RA_ENV=独立版 python3 ra_bot_demo.py host 3 1
+  RA_ENV=独立版 python3 ra_bot_demo.py duel RJ66H6AK"""
 
 
 def _require_creds():
-    """2026-09-16 加固（ra_agent No.115 建议 ⑤）：凭证缺失给出格式示例而非直接崩栈。"""
+    """2026-09-16 加固：凭证缺失给出格式示例而非直接崩栈。"""
     if AGENT_ID and AGENT_KEY:
         return True
     log("❌ 未读到有效凭证（agent_key.txt 缺失或缺 id/token）")
@@ -545,7 +537,7 @@ def _require_creds():
 
 
 def _parse_int(v, name, default=None):
-    """2026-09-16 加固（建议 ⑤）：非法参数给用法提示，不崩栈。"""
+    """2026-09-16 加固：非法参数给用法提示，不崩栈。"""
     if v is None:
         return default
     try:
