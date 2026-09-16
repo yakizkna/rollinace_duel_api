@@ -87,7 +87,7 @@
 主动发现（通知丢失 / 想接管任意等待中的房间）：`list` 拉可加入房间 → 挑选 → `join`。
 
 > join 失败：`seat_taken` / `duel_ended`（房间保持 `waiting`，可稍后重试）。
-> 可运行示例：`examples/node/bot_server_demo.mjs`。
+> 可运行示例：`examples/python/ra_bot_demo.py`（轮询代替通知回调）。
 
 ## 状态机
 

@@ -100,7 +100,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 **通知契约**：`POST` + `Content-Type: application/json`，默认地址 `https://yakidev.top`，5 秒超时、无重试；通知失败不阻断建房。
 通知体含 `event`（取值 `check` / `duel_created` / `room_closed`）、`env`（来源环境
 `pro`/`tst`/`glb`，机器人必须按它选择目标环境）等字段，详见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
-可运行示例见 [examples/node/bot_server_demo.mjs](examples/node/bot_server_demo.mjs)。
+可运行示例见 [examples/python/](examples/python/)（`ra_bot_demo.py` / `ra_cup_demo.py`；Python 示例走**轮询**而非通知回调，通知回调需自行搭建服务端）。
 
 ---
 
@@ -140,7 +140,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 4. 人机对战（机器人服务被动接入）：部署 HTTP 回调接收 `duel_created` 通知（默认地址
    `https://yakidev.top`），**按通知里的 `env`
    选定目标环境**（`pro`/`tst`/`glb` 的基址与凭证相互独立），收到后经 `join`
-   占用客队席位并自动开局（可运行示例见 `examples/node/bot_server_demo.mjs`）；
+   占用客队席位并自动开局（Python 示例用轮询代替通知回调，见 `examples/python/ra_bot_demo.py`）；
 5. 通知丢失或想接管任意等待中的房间：`list` 列出可加入房间（建议 `ai_only:true`），
    挑 `joinable` 的房间自行 `join`；
 6. 每次行动前先 `state`，仅当 `my_turn===true` 且 `allowed_actions` 非空时 `act`；
@@ -166,19 +166,15 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 
 ```
 rollinace_duel_api/
-├── README.md                      # 本文档（快速上手）
+├── README.md                      # 本文档（快速上手 + 凭证申请）
 ├── doc/
 │   ├── AI_DUEL_API.md            # AI 对战接口：完整接口文档（鉴权/状态机/动作/错误码）
 │   ├── AI_DUEL_FAQ.md            # AI 对战接口：常见问题（关房超时/道具配额/roll分布/快照折叠/snake_case…）
-│   ├── AGENT_QUICKSTART.md       # 第三方 AI 快速上手：凭证/角色 + 对战+大会完整请求流 + 分步与验收
-└── examples/
-│   ├── python/
-│   │   └── ra_bot_demo.py        # ★ 唯一 Python demo：最简规则机器人（纯标准库；凭证走同目录 agent_key.txt）
-│   ├── bash/
-│   │   ├── ai_duel_demo.sh       # 与平台 AI 打一局（建房 + state/act 循环，含 session 落盘）
-│   │   └── cup_ai_signup_demo.sh # 第三方 AI 报名参加大会示例
-│   └── node/
-│       └── bot_server_demo.mjs   # 机器人服务示例（收通知→join→走棋）
+│   └── AGENT_QUICKSTART.md       # 第三方 AI 快速上手：凭证/角色 + 对战+大会完整请求流 + 分步与验收
+├── examples/
+│   └── python/
+│       ├── ra_bot_demo.py        # ★ 最简规则机器人：建房/接房 + state/act 循环（纯标准库；凭证走同目录 agent_key.txt）
+│       └── ra_cup_demo.py        #   大会编排 demo：cup_my_schedule → cup_signup → 等排阵 → join 进场走棋
 └── skills/
     └── rollinace-ai-duel-client/ # Agent Skill：AI 对战接口
 ```

@@ -290,11 +290,12 @@ AGENT_KEY = <你的 agent_key>   # ⚠️ 一次性明文，仅本次邮件可�
 
 - **Python（唯一 demo，推荐先看）**：[`examples/python/ra_bot_demo.py`](../examples/python/ra_bot_demo.py)
   —— 纯标准库、零依赖；只保留「能跑通一局」的最小决策集（`set_pitch=bs` / 不开好坏球 / `take1b` 保底），便于对照阅读。
+  大会编排见 [`examples/python/ra_cup_demo.py`](../examples/python/ra_cup_demo.py)（报名 → 等排阵 → 进场走棋）。
   ⚠️ **凭证从同目录 `agent_key.txt` 读取**（YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块）；
   默认站点 `https://ra.yakidev.top`（独立版，`RA_BASE` 可覆盖）。
   ```bash
-  RA_ENV=独立版 python3 examples/python/ra_bot_demo.py host 9          # 建房（主队），等对手 join
-  RA_ENV=独立版 python3 examples/python/ra_bot_demo.py duel <live_id>  # 加入已有房（只能是客队 away）
+  RA_ENV=独立版 python3 examples/python/ra_bot_demo.py host 9            # 建房（主队），等对手 join
+  RA_ENV=独立版 python3 examples/python/ra_bot_demo.py duel <live_id>    # 加入已有房（只能是客队 away）
+  RA_ENV=独立版 python3 examples/python/ra_cup_demo.py                    # 报名并参加大会
   ```
-- **bash**：`examples/bash/ai_duel_demo.sh`（与平台 AI 打一局）、`examples/bash/cup_ai_signup_demo.sh`（参会报名）。
-- **Node.js**：`examples/node/bot_server_demo.mjs`（机器人服务：收 `duel_created` 通知 → join → 走棋）。
+  均为**纯标准库、零依赖**，接受方可在同目录放 `agent_key.txt` 直接跑。

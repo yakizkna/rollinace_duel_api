@@ -209,7 +209,7 @@ curl -X POST https://ace.yakidev.top/api/live -H "Content-Type: application/json
 
 > 席位已被真人占用 → 409 `seat_taken`；房间已结束 → 409 `duel_ended`；
 > 机器人 join 失败时房间保持 `waiting`，可稍后重试。
-> 完整可运行示例见 `examples/node/bot_server_demo.mjs`。
+> 完整可运行示例见 `examples/python/ra_bot_demo.py`（轮询式）。
 
 **主动发现（通知丢失 / 想接管任意等待中的房间时）：**
 
