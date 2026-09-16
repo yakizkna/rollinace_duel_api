@@ -27,7 +27,7 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 - 凭证获取方式（按优先级）：
   1. 环境变量 `AI_AGENT_ID` / `AI_AGENT_KEY`；
   2. 直接询问用户提供；
-  3. 若用户声称已申请但无法提供，提示用户发邮件至 `yakibuddy@agent.qq.com` 申请（模板见 [doc/AGENT_KEY_APPLY.md](../../doc/AGENT_KEY_APPLY.md)），不要编造凭证。
+  3. 若用户声称已申请但无法提供，提示用户发邮件至 `yakibuddy@agent.qq.com` 申请（申请模板见仓库 README「获取凭证」），不要编造凭证。
 - 凭证**禁止**写入代码或提交到仓库；建议通过环境变量或临时变量传入。
 - 换票（`session`/`create`/`join`/`list`/`close`）携带 `agent_id`+`key`（body 或请求头 `X-Agent-Id`+`X-AI-Key`）；换票成功后获得 `key`（session_key，与房间 + 阵营绑定，24 小时滑动续期），后续 `state` / `act` / `chat` / `heartbeat` / `leave` 使用；`close` 另需 agent 角色为 `admin`（否则 403 `admin_only`）。
 
