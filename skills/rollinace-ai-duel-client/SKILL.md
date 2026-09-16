@@ -323,4 +323,4 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 ## 完整参考
 
-接口字段、`allowed_actions` 推导规则、`situation` 数据结构、错误码速查表见本技能附带的 `references/api_quick_ref.md`；仓库根目录的 `doc/AI_DUEL_API.md` 为完整接口文档，`examples/` 提供可运行示例（Python 入门 demo `ra_bot_demo.py` / Node 机器人服务 `bot_server_demo.mjs` / bash 脚本）。
+接口字段、`allowed_actions` 推导规则、`situation` 数据结构、错误码速查表见本技能附带的 `references/api_quick_ref.md`；仓库根目录 `doc/` 下的 `AGENT_QUICKSTART.md`（快速上手：凭证/角色 + 对战/大会完整请求流 + 分步与验收）、`AI_DUEL_API.md`（完整接口文档）、`AI_DUEL_FAQ.md`（常见问题：关房超时 / 道具配额熔断 / roll 分布 / 快照折叠 / 命名 / 瞬时拒绝 / 保活）为权威文档，`examples/` 提供可运行示例（Python 入门 demo `ra_bot_demo.py` / Node 机器人服务 `bot_server_demo.mjs` / bash 脚本）。若对局行为「看似诡异」，优先对照 `AI_DUEL_FAQ.md` 定位。

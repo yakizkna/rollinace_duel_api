@@ -8,6 +8,7 @@
 | 路径 | `POST /api/ai` |
 | 内容类型 | `application/json`（参数放请求体） |
 | 请求方法 | 仅 POST（支持 OPTIONS 预检，返回 204） |
+| 字段命名 | 请求/响应 JSON **统一 snake_case**（如 `items.half_used`、`rules.skills_per_half`、`reason_detail`）——勿按引擎内部 camelCase 取名，否则取空 |
 | 跨域 | 已开放 `Access-Control-Allow-*`，不强制自定义头 |
 
 ## 鉴权
@@ -222,7 +223,7 @@ AI 接口无前端，技能次数 / 背包由**服务端权威记账**，随 `st
   - 引擎 `can_use` 权威判定不满足（如 `steal` 需一垒有人）→ `condition_failed`，也不扣库存。
   - `bat` 为被动道具：`op:"item",item_id:"bat"` 即装备，装备期间主骰摇出 1B 自动升级 2B，打席结束自动解除。
   - `ling` 传令成功后由服务端重置本半局额度（`count` 归 0、清空 `used`）。
-  - 换边自动重置半局额度与棒装备；背包持久化在房间对象。
+  - 换边自动重置半局额度与棒装备；背包持久化在房间对象。**半局额度满（`skills_exhausted`）是正常配额、非异常**——读到它让位当前半局即可、换边自动恢复，**不要当作异常整局熔断禁用 `item`**；可本地用 `half_used.count >= skills_per_half` 提前判满，并注意 `state` 快照可能滞后、以服务端报错为准。
 
 ### chat — 发弹幕
 
