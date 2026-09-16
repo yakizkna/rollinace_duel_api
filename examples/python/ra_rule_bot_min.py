@@ -31,6 +31,15 @@ Rollin' Ace —— 棒球龙虾 最简规则机器人（demo 版 / minimal）
   python3 ra_rule_bot_min.py host [innings] [start_inning]   # 建房主队，等对手 join
   python3 ra_rule_bot_min.py duel <live_id> [--wait]         # 加入已有房（只能客队 away）
   # 环境：RA_ENV=正式|独立版 选凭证块；RA_BASE 选站点；RA_STEP_DELAY 调节流
+
+⚠️ 与官方示例的差异（收录说明，2026-09-16 由 RA 侧补充）：
+  · 凭证：本文件读**同目录 `agent_key.txt`**（支持 YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块），
+    官方 `examples/python/ai_duel_bot.py` 走**环境变量** `AI_AGENT_ID` / `AI_AGENT_KEY` —— 两者不通用。
+  · 默认站点：本文件 `https://ra.yakidev.top`（独立版）；官方示例默认正式站。均可用 `RA_BASE` 覆盖。
+  · 收录时 RA 侧只做了三处**最小适配**（其余与作者原版一致）：① 本说明；② `act` 日志附 `rtt`；
+    ③ **参数与凭证校验**（非法参数给用法提示、缺 `agent_key.txt` 给格式示例，均不再崩栈 / 不再在导入阶段就崩）。
+  · ⚠️ 若本机开启**系统代理**：Python `urllib` 会自动走代理并可能超时（`curl` 不受影响）——
+    可在文件顶部加 `urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({})))`，或设 `no_proxy=*`。
 """
 
 import json
@@ -125,7 +134,13 @@ def load_creds():
     return agent_id, agent_key, (name or "").strip()
 
 
-AGENT_ID, AGENT_KEY, AGENT_NAME = load_creds()
+try:
+    AGENT_ID, AGENT_KEY, AGENT_NAME = load_creds()
+    _CREDS_ERR = None
+except Exception as _e:            # 收录适配③：缺 agent_key.txt 时不在此崩栈，跑命令时再给明确提示
+    AGENT_ID = AGENT_KEY = None
+    AGENT_NAME = "ra_rule_bot_min"
+    _CREDS_ERR = _e
 AGENT_NAME = AGENT_NAME or "棒球龙虾"
 
 
@@ -314,7 +329,9 @@ def rule_take_turn(key, side, d):
         log(f"[规则·网络失败] {op} 未送达，重读局面重试")
         return "retry", op
     if r.get("ok"):
-        log(f"[规则] {side} {op} {json.dumps(extra, ensure_ascii=False)} · {r.get('event') or ''}")
+        # 收录适配②：日志附 rtt（post() 已测得），便于观察「慢在哪一步」
+        log(f"[规则] {side} {op} {json.dumps(extra, ensure_ascii=False)} · {r.get('event') or ''}"
+            f" · rtt={_LAST_RTT[0]}ms")
         return "acted", op
     reason = r.get("reason")
     if reason in RECOVERABLE:
@@ -432,15 +449,43 @@ def run_duel(live_id, side="away", wait=False):
     play_loop(key, side, live_id)
 
 
+def _int_arg(v, default=None):
+    """收录适配③：把命令行数字参数转 int；非法时返回 default（由调用方提示用法，不再 ValueError 崩栈）。"""
+    if v is None:
+        return default
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _need_creds():
+    """收录适配③：需要凭证的命令在缺 agent_key.txt 时给明确提示（而不是堆栈）。"""
+    if _CREDS_ERR is None:
+        return True
+    print("❌ 未读到同目录 `agent_key.txt`（本文件仅从该文件读取凭证）：%s" % _CREDS_ERR)
+    print("   格式示例（YAML 多块，`RA_ENV` 选块）：\n"
+          "   agents:\n   - env: 独立版\n     name: <与注册名一致>\n     id: ag_xxxxxxxxxx\n     token: <agent_key>")
+    return False
+
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "host":
-        inn = int(sys.argv[2]) if len(sys.argv) > 2 else 9
-        sti = int(sys.argv[3]) if len(sys.argv) > 3 else None
+        # 先校验参数（提示更贴切），再校验凭证
+        inn = _int_arg(sys.argv[2]) if len(sys.argv) > 2 else 9
+        sti = _int_arg(sys.argv[3]) if len(sys.argv) > 3 else None
+        if (len(sys.argv) > 2 and inn is None) or (len(sys.argv) > 3 and sti is None):
+            print("用法: ra_rule_bot_min.py host [innings] [start_inning]   # 两者都必须是整数")
+            return
+        if not _need_creds():
+            return
         host_match(inn, sti)
     elif cmd == "duel":
         if len(sys.argv) < 3:
             print("用法: ra_rule_bot_min.py duel <live_id> [side]")
+            return
+        if not _need_creds():
             return
         args = [x for x in sys.argv[2:] if not x.startswith("--")]
         side = args[1] if len(args) > 1 else "away"
