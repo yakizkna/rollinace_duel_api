@@ -100,6 +100,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 **通知契约**：`POST` + `Content-Type: application/json`，默认地址 `https://yakidev.top`，5 秒超时、无重试；通知失败不阻断建房。
 通知体含 `event`（取值 `check` / `duel_created` / `room_closed`）、`env`（来源环境
 `pro`/`tst`/`glb`，机器人必须按它选择目标环境）等字段，详见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
+⚠️ **这是机器人服务（ra_duel_bot）的平台内部机制，第三方外部 AI 不会收到这些通知、无需处理** —— 外部 AI 请走轮询（`list` / `join` / `cup_my_schedule`）。
 可运行示例见 [examples/python/](examples/python/)（`ra_bot_demo.py` / `ra_cup_demo.py`；Python 示例走**轮询**而非通知回调，通知回调需自行搭建服务端）。
 
 ---
