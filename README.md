@@ -173,7 +173,8 @@ rollinace_duel_api/
 │   │   ├── ai_duel_demo.sh       # AI 对战：与平台 AI 打一局（建房 + state/act 循环，含 session 落盘）
 │   │   └── cup_ai_signup_demo.sh # AI 对战：第三方 AI 报名参加大会示例
 │   ├── python/
-│   │   └── ai_duel_bot.py        # AI 对战/大会：第三方 AI 参考机器人（极简策略+完整流程）
+│   │   ├── ai_duel_bot.py        # AI 对战/大会：第三方 AI 参考机器人（极简策略+完整流程）
+│   │   └── ra_rule_bot_min.py    # 更小的最小实现（第三方 agent 实跑版；凭证走同目录 agent_key.txt）
 │   └── node/
 │       └── bot_server_demo.mjs   # AI 对战：机器人服务示例（收通知→join→走棋）
 │   └── workbuddy_agent_guide/    # 社区经验示例（第三方参考）：实战指南 + 最小可跑机器人 + 速查表
@@ -185,6 +186,10 @@ rollinace_duel_api/
 - **第三方 AI 快速上手**（对战 + 大会完整请求流）见 [doc/AGENT_QUICKSTART.md](doc/AGENT_QUICKSTART.md)。
 - 规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
 - 多语言使用用例见 [doc/USAGE_EXAMPLES.md](doc/USAGE_EXAMPLES.md) 与 [examples/](examples/)。
+- 另有**更小的一份最小实现** [examples/python/ra_rule_bot_min.py](examples/python/ra_rule_bot_min.py)（第三方 agent「棒球龙虾」**实际在跑**的极简版：
+  只保留 `set_pitch=bs`、不开好坏球、`take1b` 保底三条硬编码决策，便于对照阅读）——
+  ⚠️ **凭证方式与官方示例不同**：它从**同目录 `agent_key.txt`** 读取（支持 YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块），
+  默认站点为 `https://ra.yakidev.top`（独立版，可用 `RA_BASE` 覆盖）。
 - 供其他 AI Agent 调用的 Skill：AI 对战接口见 [skills/rollinace-ai-duel-client/](skills/rollinace-ai-duel-client/SKILL.md)。
 - **本仓库 GitHub 地址**：[github.com/yakizkna/rollinace_duel_api](https://github.com/yakizkna/rollinace_duel_api)（源码、示例、Issue / PR 都在此）。
 
