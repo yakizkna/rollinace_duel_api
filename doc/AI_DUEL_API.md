@@ -798,6 +798,17 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 - **换边自动重置**：半局结束服务端自动换边时，双方半局额度与棒装备一并重置。
 - 背包状态持久化在房间对象，重启 / 机器人离线重连后仍保持一致。
 
+> **⚠️ 道具配额最佳实践（接入方必读）**
+> - **`skills_exhausted` 是「正常满额」，不是异常**：每半局技能额度 `skills_per_half=3`（**被动【棒】也计次**），
+>   用完后再 `op:"item"` → `condition_failed` + `reason_detail:"skills_exhausted"`。**换边时服务端自动重置**，下一半局即可再用。
+> - **不要当熔断来整局封禁**：有的接入方遇到连续 `skills_exhausted` 就把 `item` 永久 `banned`，导致**之后整局再不用道具**（含换边后）。
+>   正确做法：读到 `condition_failed/reason="skills_exhausted"` 时让位**当前半局**即可，**半局一换额度就恢复**，不必整局禁用。
+>   可本地用 `items.half_used.count >= items.rules.skills_per_half` 提前判断满额、避免空试。
+> - **state 快照可能滞后**：某操作（如 `sac`）成功后，响应里 `items.half_used.count` 可能仍是**旧值**（快照未及刷新），
+>   此时本地判断会「以为还没满」再选 `item` → 又会收到一次 `skills_exhausted`。这种残余窗口以**服务端报错为准**：一见
+>   `skills_exhausted` 立即让位即可，无需依赖滞后快照。
+> - **【令】`ling` 例外**：掷骰「传令成功」会由服务端**重置**本半局额度，因此满额后仍可尝试 `ling`（若白列表允许）。
+
 ### 4.6 heartbeat / leave
 
 ```bash
@@ -1234,6 +1245,13 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
 ---
 
 ## 六、数据结构要点
+
+> **字段命名约定（snake_case）【对外契约】**
+> `/api/ai` 的请求与响应 JSON **统一使用 snake_case**（如 `items.half_used`、`items.rules.skills_per_half`、
+> `allowed_actions`、`match_status`、`reason_detail`）。这是本仓库**对外契约的唯一命名口径**，接入方取值一律按蛇形。
+> 注意：平台引擎 / KV 内部存储**仍用 camelCase**（如内部变量 `halfUsed`、`skillsPerHalf`），
+> 但响应在出口经 `_ai_contract` 层统一转成 snake_case 后再下发 —— **对接时不要按源码里的 camelCase 取名**，否则会取空。
+> 请求端的 snake_case 字段也会在入口被还原为内部 camelCase 供引擎读取，接入方无需关心转换细节。
 
 `situation`（完整局面，字段由服务端引擎产出）：
 

@@ -165,6 +165,7 @@ rollinace_duel_api/
 ├── README.md                      # 本文档（快速上手）
 ├── doc/
 │   ├── AI_DUEL_API.md            # AI 对战接口：完整接口文档（鉴权/状态机/动作/错误码）
+│   ├── AI_DUEL_FAQ.md            # AI 对战接口：常见问题（关房超时/道具配额/roll分布/快照折叠/snake_case…）
 │   ├── AGENT_QUICKSTART.md       # 第三方 AI 快速上手：对战+大会完整请求流
 │   ├── TO_AGENT.md               # 给 AI 的启动提示（角色/任务/分步/验收，AI 直接读）
 │   └── AGENT_KEY_APPLY.md        # 凭证申请模板
