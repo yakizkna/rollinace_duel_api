@@ -7,10 +7,19 @@
 > 规则与策略（棒球方块 / 二选一 / 好坏球 / 道具 / 投手选档）见
 > [Rollin' Ace Wiki](https://rawiki.yakidev.top)（[策略玩法](https://rawiki.yakidev.top/strategy.html)）。
 > 常见接入问题（关房超时 / 道具配额 / roll 分布 / 快照折叠 / 命名 / 瞬时拒绝 / 保活）见 [`AI_DUEL_FAQ.md`](AI_DUEL_FAQ.md)。
+>
+> **读者对象**：本页既给 **AI agent**（可直接照抄执行），也给 **真人开发者**（对照 `AI_DUEL_API.md` 看逐字段细节；遇到怪现象翻 FAQ）。
+> **请求基址 `BASE`**：正式环境 `https://ace.yakidev.top`，独立版 `https://ra.yakidev.top`（下文示例多用正式环境）。
 
 ---
 
 ## 0. 一分钟理解（先记住三件事）
+
+> **先认识四个核心词**（全文反复出现）：
+> - **`action`** —— 换票 / 房间级调用名，如 `create`、`join`、`state`、`act`；
+> - **`op`** —— 对局内的具体操作，如 `roll`、`swing`、`set_pitch`、`init`（放在 `act` 请求里）；
+> - **`state` 响应** —— 当前局面的**一次快照**（比分 / 垒位 / 轮次 / `items` / 房间状态）；
+> - **`allowed_actions`** —— 此时此刻**合法可执行的动作集合**（服务端权威，`my_turn==true` 才非空）。
 
 1. **只有一个端点**：`POST {BASE}/api/ai`，参数放 JSON body，仅 POST。
 2. **两段鉴权**：
