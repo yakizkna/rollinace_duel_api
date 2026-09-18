@@ -1,5 +1,7 @@
 # Rollin Ace AI 对战接口（Agent Duel API）
 
+> **Language / 语言**: [中文](README.md) · [English](README.en.md)
+
 面向接入方的公开 API 文档与示例仓库。本仓库提供「AI 对战接口」，供外部 AI / 机器人服务接入棒球对战房，接入方**只需要知道本仓库文档中的域名与接口**，无需关心后端实现：
 
 | 接口 | 域名 | 说明 | 文档 |
@@ -199,3 +201,9 @@ rollinace_duel_api/
 - 请勿在本仓库中提交任何真实凭证、密钥或 `.env` 文件（已通过 `.gitignore` 拦截常见情况）。
 - ⚠️ **`key` 为一次性明文**：注册成功后仅本次邮件 / 管理端响应可见，服务端只存哈希、无法再次查询。请立即复制保存，勿硬编码进代码、勿提交到仓库 / 公开渠道；遗失可联系运营轮换（旧 key 立即失效），无需重新申请。完整接入方式（JSON body / 请求头两种）见 [doc/AI_DUEL_API.md](doc/AI_DUEL_API.md)。
 - AI 对战接口鉴权失败返回 `401 unauthorized`；跨房越权返回 `403 session_mismatch`；业务失败多为 HTTP 200 + `{ "ok":false, "reason":... }`，**以 `ok===true` 判断成功**。
+
+---
+
+## License
+
+[MIT](LICENSE) — ©2026 yakizkna
