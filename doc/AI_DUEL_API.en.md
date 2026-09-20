@@ -676,7 +676,7 @@ Response:
   },
   "to_move": "away",
   "my_turn": true,
-  "allowed_actions": ["roll", "set_bs", "item"],
+  "allowed_actions": ["swing", "read", "item"],
   "duel_end": null,
   "winner": null,
   "innings": {"total": 9, "start": 9},
@@ -722,13 +722,20 @@ Request params:
 
 | Field | Required | Description |
 |---|---|---|
-| `op` | Yes | `roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `set_bs` / `init` / `duel_half_start` / `set_pitch` |
+| `op` | Yes | `roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `init` / `duel_half_start` / `set_pitch` (~~`set_bs`~~ retired, see the table below) |
 | `item_id` | Required when `op=item` | Item id (`bat` / `steal` / `sac` / `mist` / `lun` / `ling`); availability is authoritatively validated by the engine's `can_use` |
-| `bs_enabled` | Required when `op=set_bs` | Toggle ball/strike mode (only affects new plate appearances) |
+| `bs_enabled` | Required when `op=set_bs` | **Retired (2026-09-21)**: duel / tournament rooms always have ball-strike mode on; `set_bs` is no longer advertised (calling it only yields `illegal_op`) |
 | `pitch` | Required when `op=set_pitch` | Pitcher style: `"bb"` (walk-prone) / `"bs"` (balanced, default) / `"ss"` (strike-prone) |
 | `session` | No | **Deprecated**: since 2026-09-04 the server settles against the room's **latest frame as the only source of truth**; this field is no longer a state input (only used for consistency warnings); omit it and call `state()` first each step for the latest state |
 | `expect_version` | No | Optimistic lock: only executes when it matches the current `version`, preventing duplicate submissions |
 | `rtt` | No | Locally measured round-trip ms (take the **most recent successful** session request; network-quality reporting, see [0.6](#06-会话请求可选字段rtt网络质量上报推荐)) |
+
+> **Fixed rule (since 2026-09-21)**: **duel / tournament rooms always use ball-strike mode.**
+> The room starts with it on and it **cannot be turned off** (on the human host page the switch is greyed out and locked,
+> showing "对战模式必须开启好坏球"; on the AI side `allowed_actions` only offers `swing` / `read` and never advertises `set_bs`).
+> So **every plate appearance starts by choosing 「打」(`swing`) or 「看」(`read`)**; `roll` only appears outside a plate
+> (e.g. wrapping up an either-or choice). Legacy code that does `set_bs` then `roll` now gets `illegal_op` —
+> follow `allowed_actions` strictly.
 
 Mapping of ops to engine calls (settlement is **always** done by the server's authoritative engine):
 
@@ -738,7 +745,7 @@ Mapping of ops to engine calls (settlement is **always** done by the server's au
 | `swing` / `read` | Swing / watch | Requires being in a ball/strike plate appearance |
 | `take1b` / `roll2` | Either-or | Safety single / go for it (needs `phase==="choose"`) |
 | `item` | Use skill/item | Requires `item_id` |
-| `set_bs` | Toggle ball/strike | Effective on new plate appearances |
+| `set_bs` | ~~Toggle ball/strike~~ | **Retired (2026-09-21)**: duel / tournament rooms always have ball-strike mode on, so `allowed_actions` no longer contains `set_bs`; calling it returns `illegal_op` with the usable actions in `allowed` |
 | `init` | Establish initial state | When the room has no state yet, established by the offense (idempotent: `already_initialized` if state exists); requires the room's `pitch` set (else `waiting_pitch`); the first inning rolls ball/strike per that pitcher style |
 | `duel_half_start` | Initialize a new half | When a half ends (`duel_end==="half"`), the room's `attacker_uid` has switched to our side, and the room's `pitch` is set, the new offense initializes the new half (human-vs-AI side-switch handoff) |
 | `set_pitch` | Defense selects pitcher style | When a half ends (`duel_end==="half"`), our side is the defense (`to_move!==my_side`), and the room's `pitch` is not yet set, call with `pitch` to select this half's pitcher style (`bb`/`bs`/`ss`) |
@@ -762,7 +769,7 @@ Success response:
   "duel_end": null,
   "winner": null,
   "match_status": "live",
-  "allowed_actions": ["roll", "set_bs", "item"],
+  "allowed_actions": ["swing", "read", "item"],
   "items": { "stock": {"bat": 20, "steal": 20, "sac": 20, "mist": 20, "lun": 20, "ling": 20},
              "half_used": {"count": 0, "used": []}, "bat_armed": false,
              "rules": {"stock_per_item": 20, "skills_per_half": 3, "no_duplicate_per_half": true} }
@@ -777,7 +784,7 @@ Illegal-action response (HTTP 200, for uniform parsing):
 
 ```json
 { "ok": false, "reason": "illegal_op", "op": "take1b",
-  "allowed": ["roll", "set_bs", "item"],
+  "allowed": ["swing", "read", "item"],
   "reason_detail": "phase_mismatch",
   "situation": { "...": "当前局面" }, "to_move": "away" }
 ```
@@ -1253,7 +1260,7 @@ Preconditions (empty array if any unmet):
 | `phase === "choose"` | `take1b`、`roll2` |
 | `phase === "bs"` or (not in plate `!plate` and `bs_enabled`) | `swing`、`read` |
 | Others (after `roll1` / `roll2`, etc.) | `roll` |
-| `!plate` (not in plate) | plus `set_bs` |
+| `!plate` (not in plate) | ~~plus `set_bs`~~ **retired (2026-09-21)**: duel / tournament rooms always have ball-strike on, so it is no longer advertised |
 | Not "plate in progress" `!(plate && bs_enabled)` | plus `item` |
 
 ---

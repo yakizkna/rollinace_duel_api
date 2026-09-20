@@ -682,7 +682,7 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
   },
   "to_move": "away",
   "my_turn": true,
-  "allowed_actions": ["roll", "set_bs", "item"],
+  "allowed_actions": ["swing", "read", "item"],
   "duel_end": null,
   "winner": null,
   "innings": {"total": 9, "start": 9},
@@ -728,13 +728,19 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `op` | 是 | `roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `set_bs` / `init` / `duel_half_start` / `set_pitch` |
+| `op` | 是 | `roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `init` / `duel_half_start` / `set_pitch`（~~`set_bs`~~ 已下线，见下表） |
 | `item_id` | `op=item` 时必填 | 道具 id（`bat` / `steal` / `sac` / `mist` / `lun` / `ling`）；可用性由引擎 `can_use` 权威校验 |
-| `bs_enabled` | `op=set_bs` 时必填 | 切换好坏球模式（仅新打席生效） |
+| `bs_enabled` | `op=set_bs` 时必填 | **已下线（2026-09-21）**：对战/大会房固定开启好坏球，`set_bs` 不再下发（传了只会得到 `illegal_op`） |
 | `pitch` | `op=set_pitch` 时必填 | 投手风格：`"bb"`（偏看）/ `"bs"`（平衡，默认）/ `"ss"`（偏打） |
 | `session` | 否 | **已弃用**：服务端自 2026-09-04 起以房间**最新帧为唯一事实源**结算，本字段不再作为局面输入（仅用于一致性告警）；请省略该字段、每步先 `state()` 取最新局面 |
 | `expect_version` | 否 | 乐观锁：仅当与当前 `version` 一致才执行，防重复提交 |
 | `rtt` | 否 | 本端实测往返 ms（取**最近一次成功**的会话请求；网络质量上报，见 [0.6](#06-会话请求可选字段rtt网络质量上报推荐)） |
+
+> **固定规则（2026-09-21 起）**：**对战 / 大会房固定使用好坏球**。
+> 房间开局即处于开启态且**不可关闭**（真人主播页的开关置灰锁死、点击提示「对战模式必须开启好坏球」；
+> AI 侧 `allowed_actions` 只给 `swing` / `read`，不再下发 `set_bs`）。
+> 因此**每个打席都要先选「打」(`swing`) 或「看」(`read`)**；`roll` 只在非打席阶段（如二选一收尾）出现。
+> 老代码里「先 `set_bs` 再 `roll`」的写法会收到 `illegal_op`，请改为严格按 `allowed_actions` 行动。
 
 操作与引擎参数的映射（结算**始终**由服务端权威引擎完成）：
 
@@ -744,7 +750,7 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 | `swing` / `read` | 打 / 看 | 需处于好坏球打席 |
 | `take1b` / `roll2` | 二选一 | 安打保底 / 放手一搏（需 `phase==="choose"`） |
 | `item` | 使用技能/道具 | 需 `item_id` |
-| `set_bs` | 切换好坏球 | 新打席生效 |
+| `set_bs` | ~~切换好坏球~~ | **已下线（2026-09-21）**：对战/大会房固定开启好坏球，`allowed_actions` 不再包含 `set_bs`；调用返回 `illegal_op` 并在 `allowed` 里给出可用动作 |
 | `init` | 建立初始局面 | 房间尚无局面时由进攻方建立（幂等：已有局面则报 `already_initialized`）；须房间 `pitch` 已设定（否则 `waiting_pitch`），首局按该投手风格掷好坏球 |
 | `duel_half_start` | 初始化新半局 | 半局结束（`duel_end==="half"`）且房间 `attacker_uid` 已切到我方、房间 `pitch` 已设定时，由新攻击方初始化新半局（人机对战换边接力） |
 | `set_pitch` | 防守选投手风格 | 半局结束（`duel_end==="half"`）且我方为防守方（`to_move!==my_side`）、房间 `pitch` 尚未设定时调用，携带 `pitch` 选定本半局投手风格（`bb`/`bs`/`ss`） |
@@ -768,7 +774,7 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
   "duel_end": null,
   "winner": null,
   "match_status": "live",
-  "allowed_actions": ["roll", "set_bs", "item"],
+  "allowed_actions": ["swing", "read", "item"],
   "items": { "stock": {"bat": 20, "steal": 20, "sac": 20, "mist": 20, "lun": 20, "ling": 20},
              "half_used": {"count": 0, "used": []}, "bat_armed": false,
              "rules": {"stock_per_item": 20, "skills_per_half": 3, "no_duplicate_per_half": true} }
@@ -783,7 +789,7 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 ```json
 { "ok": false, "reason": "illegal_op", "op": "take1b",
-  "allowed": ["roll", "set_bs", "item"],
+  "allowed": ["swing", "read", "item"],
   "reason_detail": "phase_mismatch",
   "situation": { "...": "当前局面" }, "to_move": "away" }
 ```
@@ -1260,7 +1266,7 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
 | `phase === "choose"` | `take1b`、`roll2` |
 | `phase === "bs"` 或（未进打席 `!plate` 且 `bs_enabled`） | `swing`、`read` |
 | 其余（`roll1` / `roll2` 后等） | `roll` |
-| `!plate`（未进打席） | 追加 `set_bs` |
+| `!plate`（未进打席） | ~~追加 `set_bs`~~ **已下线（2026-09-21）**：对战/大会房固定开启好坏球，不再下发 |
 | 非「打席进行中」`!(plate && bs_enabled)` | 追加 `item` |
 
 ---

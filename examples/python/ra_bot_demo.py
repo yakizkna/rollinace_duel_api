@@ -8,8 +8,8 @@ Rollin' Ace —— AI 对战入门 demo（最简规则机器人；纯标准库�
 
 保留的决策（全部硬编码、无建模、无道具、无局势判断）：
   1) set_pitch  → 固定 "bs"（默认均衡投球档）
-  2) 好坏球模式 → **不开**（纯 roll 走普通模式）
-  3) swing/read → 若服务端仍下发好坏球动作，一律 "roll"/"swing"（纯 roll，不看球）
+  2) 好坏球模式 → **房间固定开启**（2026-09-21 起服务端强制；机器人无需也不能切换）
+  3) swing/read → 一律 "swing"（不看看球保送的判断）
   4) take1b/roll2 → 固定 "take1b"（安打保底走垒，不搏 roll2）
   5) init / duel_half_start / roll → 直接执行
 
@@ -289,8 +289,8 @@ def decide_rule(d, allowed, side):
 
     ── 全部硬编码 ──
       set_pitch       → "bs"（默认均衡投球档，不按局势切换）
-      好坏球模式       → 不开（want_bs 恒 False）
-      swing / read    → "swing"（纯 roll，不做看球保送判断）
+      好坏球模式       → 房间固定开启（2026-09-21 起服务端强制；机器人无需也不能切换）
+      swing / read    → "swing"（不看看球保送的判断）
       take1b / roll2  → "take1b"（安打保底走垒，不搏 roll2）
       init / duel_half_start / roll → 直接执行
     """
@@ -301,13 +301,13 @@ def decide_rule(d, allowed, side):
         return ("duel_half_start", {})
     if "set_pitch" in a:
         return ("set_pitch", {"pitch": "bs"})     # ① 默认投球策略 bs
-    # ② 好坏球关：不调 set_bs（也不开启），直接靠 roll
-    # ③【2026-09-16 加固】roll 优先于 swing/read：
-    #    若某阶段同时下发 roll 与 swing/read，旧顺序会选 swing（与「纯 roll、不看球」声明不符）。
-    #    现改为 roll 最先判断，确保语义一致。
+    # ② 好坏球：对战/大会房固定开启（2026-09-21 起服务端强制）——
+    #    打席只会下发 swing/read（既没有 roll、也没有 set_bs），这里直接「打」。
+    # ③【2026-09-16 加固】roll 优先于 swing/read：roll 只在非打席阶段（如二选一收尾）出现，
+    #    先判可确保两者同时下发时语义一致（不因混入好坏球动作而改变原有条件）。
     if "roll" in a:
         return ("roll", {})
-    # ④ 兜底：若服务端仅下发 swing/read（无 roll），一律 swing（纯 roll，不看球）
+    # ④ 好坏球打席（仅 swing/read）：一律 swing（不看看球保送）
     if "swing" in a or "read" in a:
         return ("swing", {})
     # ⑤ take1b / roll2 → 固定 take1b

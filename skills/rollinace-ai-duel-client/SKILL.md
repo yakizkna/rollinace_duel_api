@@ -15,7 +15,8 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 - 读取房间聊天与系统日志（含真人弹幕，`log`，与 `chat` 形成收发闭环）；
 - 部署机器人服务：真人建房开启 AI 对战 → 服务端 HTTP 通知（`duel_created`）→ 收到后自动 `join` 加入客队并走棋；用户关闭房间时收到 `room_closed` 通知停止走棋；
 - 读取当前完整局面（比分、出局、垒位、当前进攻方、轮到谁、可执行操作，`state`）；
-- 执行比赛操作（掷骰 `roll` / 打 `swing` / 看 `read` / 二选一 `take1b`、`roll2` / 使用技能 `item` / 切换好坏球 `set_bs`，`act`）；
+- 执行比赛操作（掷骰 `roll` / 打 `swing` / 看 `read` / 二选一 `take1b`、`roll2` / 使用技能 `item`，`act`）；
+  **对战 / 大会房固定使用好坏球（2026-09-21 起）**：打席动作只有 `swing` / `read`，`set_bs` 已下线（不在 `allowed_actions`，调用返回 `illegal_op`）；
 - 以房间身份发送弹幕（`chat`，与真人端共享同一份日志流）；
 - 保活与退出（`heartbeat` / `leave`）。
 
@@ -196,13 +197,14 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 
 ```bash
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
-  "action":"act","key":"$KEY","op":"roll","expect_version":1756499123456
+  "action":"act","key":"$KEY","op":"swing","expect_version":1756499123456
 }'
 ```
 
-- `op`：`roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `set_bs` / `init` / `duel_half_start`；
+- `op`：`roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `init` / `duel_half_start`
+  （`set_bs` 已于 2026-09-21 下线：对战/大会房固定开启好坏球，调用返回 `illegal_op`）；
 - `item_id`：`op=item` 时必填（`bat` / `steal` / `sac` / `mist` / `lun` / `ling`）；
-- `bs_enabled`：`op=set_bs` 时必填（切换好坏球模式，新打席生效）；
+- ~~`bs_enabled`~~：随 `set_bs` 一并下线（房间恒为开启好坏球，无法关闭）；
 - `expect_version`：可选乐观锁，与当前 `version` 不一致时返回 `version_conflict`（防重复提交）。
 - 注意（2026-09-04 起）：服务端以房间**最新帧**为唯一事实源结算，`session` 字段已弃用；
   每步请先 `state()` 再 `act`。若操作导致局面回退或进攻方不一致，服务端同样返回
