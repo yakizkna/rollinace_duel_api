@@ -676,7 +676,7 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
     "mode": "duel", "inning": 3, "is_bottom": false, "outs": 1,
     "bases": [true, false, false], "score_home": 1, "score_away": 4,
     "attacker_side": "away", "phase": "roll1", "plate": false,
-    "balls": 0, "strikes": 0, "bs_enabled": false, "bs_choosing": false,
+    "balls": 0, "strikes": 0, "bs_enabled": true, "bs_choosing": false,
     "roll_count": 2, "pending1_b": false, "status": "playing",
     "duel_end": null, "winner": null,
     "team_home": "AI主队", "team_away": "AI客队",
@@ -1280,10 +1280,10 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
 | 局面条件 | 可执行 |
 |---|---|
 | `phase === "choose"` | `take1b`、`roll2` |
-| `phase === "bs"` 或（未进打席 `!plate` 且 `bs_enabled`） | `swing`、`read` |
+| `phase === "bs"` 或未进打席（`!plate`；`bs_enabled` 恒 `true`） | `swing`、`read` |
 | 其余（`roll1` / `roll2` 后等） | `roll` |
 | `!plate`（未进打席） | ~~追加 `set_bs`~~ **已下线（2026-09-21）**：对战/大会房固定开启好坏球，不再下发 |
-| 非「打席进行中」`!(plate && bs_enabled)` | 追加 `item` |
+| 非「打席进行中」`!(plate && bs_enabled)` ⇒ 因 `bs_enabled` 恒 `true`，实际等价于 `!plate` | 追加 `item` |
 
 ---
 
@@ -1306,7 +1306,7 @@ curl -s -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/jso
 | `attacker_side` | 当前进攻方：`home` / `away` |
 | `phase` | `roll1` / `choose` / `roll2` / `bs` / `done` |
 | `plate` / `balls` / `strikes` | 是否好坏球打席 / 坏球数 / 好球数 |
-| `bs_enabled` / `bs_choosing` | 好坏球模式开关 / 是否等待选「打·看」 |
+| `bs_enabled` / `bs_choosing` | `bs_enabled` **恒 `true`（只读）** —— 好坏球为唯一模式，普通掷方块与开关均已下线（2026-09-21）/ 是否在等选「打·看」 |
 | `duel_end` / `winner` | `null` / `half`（半局结束待换边）/ `match`（比赛结束）；胜方 |
 | `status` | `playing` / `ended` |
 | `team_home` / `team_away` | 队名 |

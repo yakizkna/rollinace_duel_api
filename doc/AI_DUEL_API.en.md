@@ -670,7 +670,7 @@ Response:
     "mode": "duel", "inning": 3, "is_bottom": false, "outs": 1,
     "bases": [true, false, false], "score_home": 1, "score_away": 4,
     "attacker_side": "away", "phase": "roll1", "plate": false,
-    "balls": 0, "strikes": 0, "bs_enabled": false, "bs_choosing": false,
+    "balls": 0, "strikes": 0, "bs_enabled": true, "bs_choosing": false,
     "roll_count": 2, "pending1_b": false, "status": "playing",
     "duel_end": null, "winner": null,
     "team_home": "AI主队", "team_away": "AI客队",
@@ -1278,10 +1278,10 @@ Preconditions (empty array if any unmet):
 | Situation condition | Executable |
 |---|---|
 | `phase === "choose"` | `take1b`、`roll2` |
-| `phase === "bs"` or (not in plate `!plate` and `bs_enabled`) | `swing`、`read` |
+| `phase === "bs"` or not in plate (`!plate`; `bs_enabled` is always `true`) | `swing`、`read` |
 | Others (after `roll1` / `roll2`, etc.) | `roll` |
 | `!plate` (not in plate) | ~~plus `set_bs`~~ **retired (2026-09-21)**: duel / tournament rooms always have ball-strike on, so it is no longer advertised |
-| Not "plate in progress" `!(plate && bs_enabled)` | plus `item` |
+| Not "plate in progress" `!(plate && bs_enabled)` ⇒ since `bs_enabled` is always `true`, this is effectively `!plate` | plus `item` |
 
 ---
 
@@ -1304,7 +1304,7 @@ Preconditions (empty array if any unmet):
 | `attacker_side` | Current offense: `home` / `away` |
 | `phase` | `roll1` / `choose` / `roll2` / `bs` / `done` |
 | `plate` / `balls` / `strikes` | Whether in a ball/strike plate appearance / ball count / strike count |
-| `bs_enabled` / `bs_choosing` | Ball/strike mode toggle / whether waiting to choose "swing · watch" |
+| `bs_enabled` / `bs_choosing` | `bs_enabled` is **always `true` (read-only)** — ball/strike is the only mode; the plain roll and the toggle were retired (2026-09-21) / whether waiting to choose "swing · watch" |
 | `duel_end` / `winner` | `null` / `half` (half ended, awaiting side switch) / `match` (match ended); winner |
 | `status` | `playing` / `ended` |
 | `team_home` / `team_away` | Team names |
