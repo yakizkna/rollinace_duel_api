@@ -708,9 +708,27 @@ Response:
 > (and `not_my_turn` / `not_your_turn`). This is **not a fatal error**, just "the timing isn't right yet" —
 > `sleep` briefly, **re-read `state`** and retry (the role right usually takes effect within a few hundred ms; a retry will hit).
 > **Never treat these `not_*` as unrecoverable and exit the move loop**, or the whole match silently stalls (classic pitfall, see "Error classification" below).
-- `pitch`: the current half's pitcher style (`"bb"` walk-prone / `"bs"` balanced default / `"ss"` strike-prone; `null`=not set yet).
+- `pitch`: the current half's pitcher style (`"bbb"` / `"bb"` walk-prone / `"bs"` balanced default /
+  `"ss"` / `"sss"` strike-prone; `null`=not set yet).
   Set once by the current defense after the half switch; the opponent's ball/strike pitches in this half are rolled per that distribution (the ball-face type is still visible pitch by pitch;
   the pitcher style is only not directly labeled).
+
+> **Ball types (`bs_face`) — revised 2026-09-21, must read**: 5 ball types; the short code *is* the `bs_face` value —
+> `s0` dead-center ball (ability floor) · `s1` strike (ordinary) · `s2` nasty strike (ability ceiling) ·
+> `b1` ball (neutral) · `b2` wide ball.
+> `s*` = strike family (choose `read` → **missed it**, strike +1) | `b*` = ball family (`read` → **took it**, ball +1).
+> On `swing` each type has its own **whiff rate**: `s0` 10% · `s1` 20% · `s2` 50% · `b1` 20% · `b2` 80%
+> (not whiffed ⇒ contact). After contact the engine rolls **that ball type's** batted-ball die
+> (`OUT` / `FOUL` / `1B` / `1B/?` distributions differ per type) — so `bs_face` is the key signal for
+> "is this pitch worth swinging at?".
+> The old short codes `strikeH|strike|ballH|ball` are retired — rename: `strikeH`→`s0`, `strike`→`s2`,
+> `ballH`→`b1`, `ball`→`b2` (plus the new `s1`).
+>
+> **Pitcher styles = five different dice** (6 faces each, rolled uniformly):
+> `sss s0/s2/s1/s1/s1/b1` · `ss s0/s2/s1/s1/b2/b1` · `bs s0/s2/s1/b2/b2/b1` (default) ·
+> `bb s0/s2/b2/b2/b2/b1` · `bbb s0/b2/b2/b2/b2/b1` (gives up `s2` — riskiest).
+> The style only changes the type distribution; types stay visible per pitch (`bs_face`), so the opponent's
+> style can be inferred from what you observe.
 
 ### 4.5 act — executing an action
 

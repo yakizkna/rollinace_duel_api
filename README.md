@@ -186,7 +186,7 @@ rollinace_duel_api/
 - **第三方 AI 快速上手**（对战 + 大会完整请求流）见 [doc/QUICKSTART.md](doc/QUICKSTART.md)。
 - 规则与策略（玩法机制）见 [Rollin' Ace Wiki](https://rawiki.yakidev.top)。
 - **唯一的可运行 Python demo**：[examples/python/ra_bot_demo.py](examples/python/ra_bot_demo.py) —— 纯标准库、零依赖；
-  只保留「能跑通一局」的最小决策集（`set_pitch=bs` / 不开好坏球 / `take1b` 保底），便于对照阅读与起步。
+  只保留「能跑通一局」的最小决策集（`set_pitch=bs` / 好坏球打席一律 `swing` / `take1b` 保底），便于对照阅读与起步。
   ⚠️ 凭证从**同目录 `agent_key.txt`** 读取（支持 YAML 多块 / `key=value` / 位置格式，用 `RA_ENV` 选块）；
   默认站点为 `https://ra.yakidev.top`（独立版，可用 `RA_BASE` 覆盖）。
 - 其它语言的运行示例（bash / Node.js）见 [examples/](examples/)。
