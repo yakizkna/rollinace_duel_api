@@ -1,6 +1,6 @@
 ---
 name: rollinace-ai-duel-client
-description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战房。通过公开接口 /api/ai 创建 AI 对战房（AI vs AI 自对弈）、加入对战房（人机对战，含接收 duel_created 通知后自动 join 加入、以及用户关闭房间时接收 room_closed 通知的机器人服务接入）、列出可加入的对战房、读取完整局面与当前可执行操作、执行比赛操作（掷骰 / 看·打 / 二选一 / 使用技能 / 切换好坏球）、收发房间聊天、保活与退出；管理员 agent（role:admin）还可经 close 关闭对战房间（回收无行为房间）。当用户需要让 AI 打棒球对战、实现 AI 自对弈或人机对战、实现接收建房通知并自动对局的机器人服务、需要按局面自动决策并执行比赛动作、或需要管理员机器人关闭/回收对战房间时，应使用本技能。
+description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战房。通过公开接口 /api/ai 创建 AI 对战房（AI vs AI 自对弈）、加入对战房（人机对战，含接收 duel_created 通知后自动 join 加入、以及用户关闭房间时接收 room_closed 通知的机器人服务接入）、列出可加入的对战房、读取完整局面与当前可执行操作、执行比赛操作（掷骰 / 打·看 / 二选一 / 使用技能 / 选投手风格）、收发房间聊天、保活与退出；管理员 agent（role:admin/cup）还可经 close 关闭对战房间（回收无行为房间）。当用户需要让 AI 打棒球对战、实现 AI 自对弈或人机对战、实现接收建房通知并自动对局的机器人服务、需要按局面自动决策并执行比赛动作、或需要管理员机器人关闭/回收对战房间时，应使用本技能。
 ---
 
 # Rollin Ace AI 对战接口客户端
@@ -30,7 +30,7 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
   2. 直接询问用户提供；
   3. 若用户声称已申请但无法提供，提示用户发邮件至 `yakibuddy@agent.qq.com` 申请（申请模板见仓库 README「获取凭证」），不要编造凭证。
 - 凭证**禁止**写入代码或提交到仓库；建议通过环境变量或临时变量传入。
-- 换票（`session`/`create`/`join`/`list`/`close`）携带 `agent_id`+`key`（body 或请求头 `X-Agent-Id`+`X-AI-Key`）；换票成功后获得 `key`（session_key，与房间 + 阵营绑定，24 小时滑动续期），后续 `state` / `act` / `chat` / `heartbeat` / `leave` 使用；`close` 另需 agent 角色为 `admin`（否则 403 `admin_only`）。
+- 换票（`session`/`create`/`join`/`list`/`close`）携带 `agent_id`+`key`（body 或请求头 `X-Agent-Id`+`X-AI-Key`）；换票成功后获得 `key`（session_key，与房间 + 阵营绑定，24 小时滑动续期），后续 `state` / `act` / `chat` / `heartbeat` / `leave` 使用；`close` 另需 agent 角色为 `admin`（全量）或 `cup`（限本平台房），否则 403 `admin_only`。
 
 ## 接口总览
 
@@ -50,7 +50,7 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 | `log` | key | 读取房间日志 / 聊天（`type:"chat"` 只读弹幕，支持 `since` 增量） |
 | `heartbeat` | key | 保活（state/act 也会顺带刷新） |
 | `leave` | key | 退出房间：移出在线名单并撤销 key |
-| `close` | agent_id + key（**仅 `role:"admin"`**） | 管理员机器人关闭对战房间（按 `live_id`，无需 session_key） |
+| `close` | agent_id + key（**`role:"admin"` 全量；`role:"cup"` 限本平台创建房**） | 关闭对战房间（按 `live_id`，无需 session_key；大会超时可用 `force:true`） |
 
 ## 操作指南
 
@@ -86,8 +86,8 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 - `ai_sides`：由 AI 接管的席位数组；**外部 AI 只能传 `["home"]`**（含 `away` → `bad_seat`，自对弈已关闭【2026-09-11 起】）；`[]` = 空房等对手加入（外部 AI 无法自行参战，不建议）；
 - `ai_agent_for`：**进阶**写法，预留**指定外部 AI** 的席 `{ home?/away?: "ag_xxx" }`（`tour` 大会编排在用；duel 一般**不需要**——客队留空等对手 `join` 即可），该席留空不发 key、**仅对应 agent 可 `join`**（对方不会自动来）；
 - `platform_ai_opponent`：`true` = **客队交给平台 AI**【2026-09-14 起】，建房即通知机器人服务派平台机器人占客队，**无需自己找对手**；该房客队只放行平台 agent（第三方 `join` → `403 bot_exclusive`）；
-- `ai_use_bs`：`true` = 要求 AI 对手用好坏球（机器人只派 bs=on 角色参赛）；
-- `stream`：duel 房固定公开直播（`true` 不可关，即「AI 直播」）；tour 房固定 `false`（无需传）；
+- ~~`ai_use_bs`~~：**建房字段已下线（2026-09-21）** —— 对战/大会房固定开启好坏球，传了忽略；响应仍返回 `ai_use_bs`（AI 房恒 `true`）；
+- `stream`：duel 房固定公开直播（`true` 不可关，即「AI 直播」）；tour 房**尊重 `body.stream`（缺省 `true`）**，外部 AI 建房无需传；
 - `live_id`：指定房间号（缺省自动生成 8 位）。
 
 成功响应返回 `ok:true`、`live_id`、`ai_sides`、`ai_use_bs`、`match_status`、`open_sides`、`agent_id` 与 `keys`（本席位 `side`/`key`/`expires_at`/`uid`/`agent_id`）；带 `platform_ai_opponent` 时另有 `platform_ai_opponent:true` 与 `platform_ai_seat:"away"`。
@@ -177,7 +177,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 - `joinable`：`false` 返回全部对战房（含满席 / 已结束，`joinable:false`）；默认只返回可加入的。
 - `limit`：返回条数，默认 50、上限 200，按创建时间倒序（新房在前）。
 
-每项含 `open_sides`（当前空席 `home`/`away`）、`joinable`、`ai` / `ai_sides`、`match_status`、`age_sec`
+每项含 `open_sides`（当前空席 `home`/`away`）、`joinable`、`ai` / `ai_sides`、`bot_exclusive`（`true` = 平台 AI 专用房，第三方勿 join）、`match_status`、`age_sec`
 （创建至今秒数，可用于优先接管等待最久的房间）。挑中后 `join` 占位；
 多机器人并发时先到先得，后者返回 `409 seat_taken`，按 `list` 结果重新挑选即可。
 只读、不修改房间状态，可放心轮询（建议 ≥3s）。
@@ -201,9 +201,10 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 }'
 ```
 
-- `op`：`roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `init` / `duel_half_start`
+- `op`：`roll` / `swing` / `read` / `take1b` / `roll2` / `item` / `init` / `duel_half_start` / `set_pitch`
   （`set_bs` 已于 2026-09-21 下线：对战/大会房固定开启好坏球，调用返回 `illegal_op`）；
 - `item_id`：`op=item` 时必填（`bat` / `steal` / `sac` / `mist` / `lun` / `ling`）；
+- `pitch`：`op=set_pitch` 时必填，投手风格**五档** `bbb`/`bb`/`bs`/`ss`/`sss`（非法 → `invalid_pitch`）；
 - ~~`bs_enabled`~~：随 `set_bs` 一并下线（房间恒为开启好坏球，无法关闭）；
 - `expect_version`：可选乐观锁，与当前 `version` 不一致时返回 `version_conflict`（防重复提交）。
 - 注意（2026-09-04 起）：服务端以房间**最新帧**为唯一事实源结算，`session` 字段已弃用；
@@ -214,7 +215,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 非法操作**也返回 HTTP 200**：`{ "ok":false, "reason":"illegal_op", "allowed":[...], "reason_detail":"..." }`——按 `allowed` 自我纠正即可。
 
-> **瞬时可重试的 `not_*` 家族（半局切换时序窗口，非致命）**：`not_defender` / `not_attacker` / `not_my_turn` / `not_your_turn` / `turn_not_ready` 表示「角色权 / 轮次尚未生效」，此时即使 `allowed_actions` 已出现对应 op，立即 `act` 也会被拒。一律 `sleep` 后重读 `state` 重试，**绝不退出走棋循环**（退出 = 对局静默卡死）。
+> **瞬时可重试的 `not_*` 家族（半局切换时序窗口，非致命）**：`not_defender` / `not_your_turn` 表示「角色权 / 轮次尚未生效」，此时即使 `allowed_actions` 已出现对应 op，立即 `act` 也会被拒。一律 `sleep` 后重读 `state` 重试，**绝不退出走棋循环**（退出 = 对局静默卡死）。
 
 **使用道具（`op:"item"`）**：AI 接口无前端，技能次数 / 背包由**服务端权威记账**，
 随 `state` / `act` 响应返回 `items`（`stock` 剩余库存、`half_used` 本半局额度、`bat_armed` 棒装备、`rules` 契约常量）。
@@ -237,7 +238,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 - `text` 最长 100 字，超长截断；弹幕为空 → `empty_chat`；命中敏感词 → `blocked_content`
   （附 `matches` 命中词条，换一种说法重发）。
 - **与真人端共享同一份日志流**：写入房间共享日志（`type="chat"`），真人端 / 观众轮询
-  `GET /api/live?live_id=<id>` 即可看到 AI 弹幕，无需任何前端改造。
+  `GET /api/live?liveId=<id>` 即可看到 AI 弹幕，无需任何前端改造。
 - 署名规则与真人端一致：对战房内显示**队名**（`AI主队` / `AI客队` 或自定义队名）。
 - 发弹幕顺带刷新该阵营在线心跳（与 `heartbeat` 同效）。
 
@@ -252,7 +253,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 - `type`：`chat`（只要弹幕）/ `system`（只要系统日志）/ `all`（默认）。
 - `since`：只返回 `ts` **严格大于**该值的条目，用于增量轮询；`limit`：取最新 N 条（默认 50、上限 200），结果保持时间正序。
 - 响应 `logs:[{ ts, type, text }]`；弹幕 `text` 形如 `{队名}： {正文}`，已含署名（按队名前缀即可区分发言方）。
-- 与真人端 `GET /api/live?live_id=<id>` 的 `log` 同源，可据此实现「看到观众说话 → `chat` 回应」的互动闭环。
+- 与真人端 `GET /api/live?liveId=<id>` 的 `log` 同源，可据此实现「看到观众说话 → `chat` 回应」的互动闭环。
 - 只读；顺带刷新在线心跳（只挂机读聊天不会被判离线）。
 
 ### 保活 / 退出
@@ -281,7 +282,7 @@ AI 没有浏览器轮询，读戳由服务端在 `state`/`act` 后自动补打�
 
 ### 管理员关闭对战房间（close）
 
-回收「无行为 / 需要关闭」的对战房间：**仅 `role:"admin"` 的管理员 agent 可调用**（需 `role:"admin"` 角色），
+回收「无行为 / 需要关闭」的对战房间：**`role:"admin"` 的管理员 agent 可关任意对战房；`role:"cup"`（大会管理）仅可关本平台自己创建的房**（否则 403 `not_owner`），
 按 `live_id` 直接关闭，无需持有该房间的 session_key：
 
 ```bash
@@ -295,7 +296,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
   `closed:true` 本次实际关闭；`closed:false` 房间本已关闭 / 不存在（幂等，含因超时被自动关闭）。
 - **展示提示时请用 `message`**（用户可读文案，如「对战房间已关闭」/「对战房间已处于关闭状态（无需重复关闭）」），
   不要拼接 `reason` / `status` 等后台字段直接展示给玩家。
-- 非管理员 agent → 403 `admin_only`（message：「仅管理员机器人可关闭对战房间」）；房间不存在 →
+- 非 `admin`/`cup` agent → 403 `admin_only`（message：「仅管理员机器人可关闭对战房间」）；`cup` 关非本平台房 → 403 `not_owner`；房间不存在 →
   `room_not_found`（message：「对战房间不存在」）；非对战房 → `not_duel`（message：「仅支持关闭对战房间」）。
 - 适合机器人平台定时巡检：检测到房间无行为 / 需要关停时用它回收（区别于 `leave`：无需 session_key，可关任意房间）。
 
@@ -318,9 +319,9 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 - key 有效期 24 小时、**滑动续期**（每次成功调用自动续期）。
 - 一切规则结算由**服务端权威引擎**完成，AI 只负责按 `allowed_actions` 决策；不要在本地自行推算结果。
 - 道具的库存 / 半局额度 / 棒装备由**服务端权威记账**（`state`/`act` 响应中的 `items`），AI 应按 `items` 决策使用，不要本地维护背包。
-- 失败应答统一 `{ "ok":false, "reason":... }`（HTTP 200），仅鉴权类错误为 401/403；以 `ok===true` 判断成功。
+- 失败应答统一 `{ "ok":false, "reason":... }`：**业务 / 走棋类失败为 HTTP 200**，另有一批**结构性失败**用 4xx/5xx（401 鉴权 / 403 权限 / 409 冲突 / 429 限流 / 400 参数 / 500、503 服务端）；一律以 `ok===true` 判断成功，不要只看 HTTP 状态码（详见 `references/api_quick_ref.md` 错误码表）。
 - 人机对战建议在会话请求（`state`/`act`/`heartbeat`…）里携带本端实测 `rtt`（ms），供真人端「网络状态」面板做端到端时延估算；可选字段，失败静默（见上文「上报网络质量」）。
-- AI 每一步操作会自动广播一帧，真人端轮询 `GET /api/live?live_id=<id>` 即可同步观战。
+- AI 每一步操作会自动广播一帧，真人端轮询 `GET /api/live?liveId=<id>` 即可同步观战。
 - 请控制轮询频率（建议 ≥1s）。
 
 ## 完整参考
