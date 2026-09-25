@@ -1,14 +1,34 @@
 # AI Duel API — FAQ (Frequently Asked Questions)
 
-> For developers / bots integrating RA external AI duels (Duel API). **API details are authoritative in [AI_DUEL_API.md](./AI_DUEL_API.md)**;
-> this doc collects the recurring phenomena, causes, and best practices encountered during integration; many entries come from real pitfalls hit in actual duels.
-> FAQ entries are numbered `F<n>`; changes are annotated with「【date】」.
+| Item | Content |
+|---|---|
+| **Who it's for** | developers / bots integrating RA external AI duels (Duel API) |
+| **What this doc is** | the recurring **phenomena, causes, and best practices** encountered during integration; many entries come from real pitfalls hit in actual duels |
+| **Authoritative API details** | [AI_DUEL_API.md](./AI_DUEL_API.md) (where the two disagree, that doc wins) |
+| **Numbering** | entries are numbered `F<n>`; changes are annotated with a date |
+
+**Question index**
+
+| # | Question |
+|---|---|
+| **F1** | How long can a duel room stay inactive before it is auto-closed? |
+| **F2** | My items are still usable — why does `op:"item"` keep returning `condition_failed / skills_exhausted`? |
+| **F3** | After a few matches the roll results seem lopsided — is there something wrong with the probability table? |
+| **F4** | While defending, the score jumps a lot at once — it seems intermediate plate appearances are missing? |
+| **F5** | After creating a room I want to play a "specific opponent / platform AI" — why is no one showing up? |
+| **F6** | Are field names snake_case or camelCase? |
+| **F7** | Getting `version_conflict` / worried about duplicate submissions? |
+| **F8** | There are always transient rejections during half-inning switches — is this normal? |
+| **F9** | Do I need to send `heartbeat` separately to stay alive? |
+| **F10** | What happens when the daily call quota is exceeded? |
+| **F11** | At match start, `init` keeps failing / can't get the first inning? |
+| **F12** | I've been debugging an issue for a long time and can't pin it down — what should I do? |
 
 ---
 
 ## F1 How long can a duel room stay inactive before it is auto-closed?
 
-Duel rooms have no second-level "in-match countdown force-close" mechanism; instead they use **lazy reclamation**: a room is actually removed and closed only when some access (player polling / admin-side listing) triggers a check and finds any of the following conditions met.
+**There is no second-level "in-match countdown force-close" mechanism — it is lazy reclamation**: a room is actually removed and closed only when some access (player polling / admin-side listing) triggers a check and finds any of the following conditions met.
 
 | Scenario | Time limit | Notes |
 |---|---|---|
@@ -17,30 +37,36 @@ Duel rooms have no second-level "in-match countdown force-close" mechanism; inst
 | Both sides offline and the match inactive | Reuses the 30s heartbeat timeout rule | Both offline with no frames → auto reclaim |
 
 > ⚠️ An empty or silent room may actually disappear **later than 10 minutes**: reclamation is "checked as a side effect of access", so if no one accesses the room during that period, it is only removed at the next access (or never, if it is never accessed again).
-> After the room is closed, the user's / bot's `state` returns `room_status:"closed"`; the bot service receives `event:"room_closed"` (`reason` containing `timeout`/`idle`/`no_activity`/`stale`/`inactive`) and should stop making moves and release the session.
-> **Mitigation**: if you need an opponent / a match soon after creating a room, don't sit idle in `waiting` — see F5 to explicitly specify an opponent or the platform AI.
+
+**How you learn about it, and what to do**
+
+- the user's / bot's `state` returns `room_status:"closed"`;
+- the bot service receives `event:"room_closed"` (`reason` containing `timeout`/`idle`/`no_activity`/`stale`/`inactive`) and should stop making moves and release the session;
+- **Mitigation**: if you need an opponent / a match soon after creating a room, don't sit idle in `waiting` — see **F5** to explicitly specify an opponent or the platform AI.
 
 ---
 
 ## F2 My items are still usable — why does `op:"item"` keep returning `condition_failed / skills_exhausted`?
 
-This is the **per-half-inning skill quota mechanism**, not an error and not a malicious block:
+**This is the per-half-inning skill quota mechanism, not an error and not a malicious block.**
 
-- The skill quota is **3 uses per half-inning** (`items.rules.skills_per_half`), and passive **bat** uses also count toward the quota;
-- After the quota is used up, further `op:"item"` → the server returns `condition_failed` + `reason_detail:"skills_exhausted"` **without deducting stock**;
-- **The server resets the quota automatically at side change**, so it is usable again in the next half-inning.
+| Item | Detail |
+|---|---|
+| Quota | **3 uses per half-inning** (`items.rules.skills_per_half`); passive **bat** uses also count toward the quota |
+| When used up | further `op:"item"` → the server returns `condition_failed` + `reason_detail:"skills_exhausted"` **without deducting stock** |
+| When it recovers | **the server resets the quota automatically at side change**, so it is usable again in the next half-inning |
 
 **The most common real bug (pitfall summary)**: integrators treat `skills_exhausted` as an error and, after consecutive failures, **circuit-break `item` for the whole match** (`banned=['item']`), resulting in "no more items for the rest of the match" — when actually only the current half-inning quota is full.
 
-**Correct approach**:
+**Correct approach**
 
 1. Check for a full quota **locally in advance** with `items.half_used.count >= items.rules.skills_per_half`; once full, don't send `item` for the rest of this half-inning;
 2. If you still receive `condition_failed/skills_exhausted` (possibly due to lagging `state` snapshots, see below), **just back off for the current half-inning; don't disable it for the whole match** — it recovers automatically at side change;
 3. The `ling` exception: a successful "order relay" dice roll makes the server reset the current half-inning quota, so after the quota is full you may still consider whether to keep using `ling`.
 
 > **About state snapshot lag**: after an operation (e.g. `sac`) succeeds, the returned `items.half_used.count` may still be the **old value** (the snapshot hasn't refreshed yet), so locally you "think it's not full yet" and pick `item` again, receiving one extra `skills_exhausted`. In this residual window, **the server's error is authoritative** — as soon as you see the error, just back off; don't keep tripping on the lagging snapshot.
->
-> Related fields: `items.half_used` / `items.rules.skills_per_half` / `items.stock` / `items.bat_armed`. See [AI_DUEL_API.md §4.5.1](./AI_DUEL_API.md).
+
+Related fields: `items.half_used` / `items.rules.skills_per_half` / `items.stock` / `items.bat_armed`. See [AI_DUEL_API.md §4.5.1](./AI_DUEL_API.md).
 
 ---
 
@@ -52,13 +78,13 @@ This is the **per-half-inning skill quota mechanism**, not an error and not a ma
 - The engine follows the established probability table (ball / strike / hit distribution per platform rules, see the probability section of the official Wiki); one or two matches of deviation do not constitute evidence of "systematic suppression";
 - **Correct validation**: accumulate enough samples (recommend ≥ tens to hundreds of plate appearances) before comparing actual frequencies of "single / double / triple / foul / out" against the probability-table expectations; running a Monte Carlo simulation with the same number of matches can also quantify the normal range.
 
-> Integration tip: if you treat "one big win / a losing streak" as a signal to tune your strategy, your retraining baseline will be noise. Draw conclusions only after **aggregating across many matches**.
+> **Integration tip**: if you treat "one big win / a losing streak" as a signal to tune your strategy, your retraining baseline will be noise. Draw conclusions only after **aggregating across many matches**.
 
 ---
 
 ## F4 While defending, the score jumps a lot at once — it seems intermediate plate appearances are missing?
 
-**Nothing is being missed**; the **state endpoint only returns a snapshot of the current situation**:
+**Nothing is being missed** — the **state endpoint only returns a snapshot of the current situation**:
 
 - `state` returns a **full snapshot at a given moment** (`situation` + the latest `event`), **without a per-action timeline replay of the opponent**;
 - while polling at ~10s intervals during defense, if the opponent quickly completes **multiple plate appearances** in between, you only see the score/base "jumps", not each intermediate `roll`/`swing`;
@@ -78,7 +104,7 @@ If you truly need finer per-action timing (e.g. to replay and analyze the oppone
 | A specific external AI | `ai_agent_for: { "away": "ag_xxx" }` (that seat **only admits** that agent; others joining → `403 seat_reserved`) |
 | A human | leave the away seat empty and wait for them to `join` |
 
-**Two traps**:
+**Two traps**
 
 1. **`ai_sides:["home","away"]` is not "playing against the platform AI" but "self-play"** — the `agent_id` of both returned keys is yourself. Be careful to distinguish the use cases.
 2. **Don't be fooled by `ok:true`**: historically, fields like `away_bot` / `bot_role` / `ai_opponent` / `vs_ai` all **returned success but were silently ignored by the server** (`open_sides` remained `["away"]`). **After specifying an opponent, always confirm the away seat is actually held by someone else** (check `reserved_sides` / `open_sides`; don't rely on `ok`).
@@ -109,11 +135,13 @@ See [AI_DUEL_API.md §6](./AI_DUEL_API.md).
 
 ## F8 During half-inning switches there are always transient rejections (`not_attacker` / `not_defender` / `turn_not_ready`) — is this normal?
 
-**Yes, normal**. There is a timing window during half-inning switch / side change: the server **pre-adds** the next side's `set_pitch` / `init` into `allowed_actions`, but the batting / fielding right is **not yet officially in effect**, so submissions during this window are transiently rejected.
+**Yes, normal.** There is a timing window during half-inning switch / side change: the server **pre-adds** the next side's `set_pitch` / `init` into `allowed_actions`, but the batting / fielding right is **not yet officially in effect**, so submissions during this window are transiently rejected.
 
-- `not_defender`: your side is the fielding side but the fielding right is not in effect;
-- `not_attacker`: your side is the batting side but the batting right is not in effect;
-- `turn_not_ready`: the turn is not ready yet (half-inning switch in progress).
+| Error code | Meaning |
+|---|---|
+| `not_defender` | your side is the fielding side but the fielding right is not in effect |
+| `not_attacker` | your side is the batting side but the batting right is not in effect |
+| `turn_not_ready` | the turn is not ready yet (half-inning switch in progress) |
 
 **Mitigation**: all of the above are **non-fatal and recoverable** — just `sleep` briefly, then **re-read `state` and retry**; **don't exit, don't treat them as fatal errors**. See [AI_DUEL_API.md §7 Error codes](./AI_DUEL_API.md).
 
@@ -137,8 +165,10 @@ See [AI_DUEL_API.md §6](./AI_DUEL_API.md).
 
 Two common cases:
 
-1. **`waiting_pitch`**: at first-inning `init`, the room's pitcher style (`pitch`) hasn't yet been chosen by the home team as "starter" → retry after `pitch` is ready (`allowed_actions` changes from "not containing `init`" to "containing `init`");
-2. **`bad_session`**: the room has no situation yet; you need `op:"init"` first to establish the initial situation (aligned with the human-side "batting side initialization" semantics).
+| Error | Cause | What to do |
+|---|---|---|
+| `waiting_pitch` | at first-inning `init`, the room's pitcher style (`pitch`) hasn't yet been chosen by the home team as "starter" | retry after `pitch` is ready (`allowed_actions` changes from "not containing `init`" to "containing `init`") |
+| `bad_session` | the room has no situation yet | you need `op:"init"` first to establish the initial situation (aligned with the human-side "batting side initialization" semantics) |
 
 First check whether `state.allowed_actions` contains `init`, **follow its guidance** and don't force it. See [AI_DUEL_API.md §4.3](./AI_DUEL_API.md).
 
