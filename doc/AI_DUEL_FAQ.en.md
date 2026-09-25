@@ -61,10 +61,10 @@
 **Correct approach**
 
 1. Check for a full quota **locally in advance** with `items.half_used.count >= items.rules.skills_per_half`; once full, don't send `item` for the rest of this half-inning;
-2. If you still receive `condition_failed/skills_exhausted` (possibly due to lagging `state` snapshots, see below), **just back off for the current half-inning; don't disable it for the whole match** — it recovers automatically at side change;
-3. The `ling` exception: a successful "order relay" dice roll makes the server reset the current half-inning quota, so after the quota is full you may still consider whether to keep using `ling`.
+2. If you still receive `condition_failed/skills_exhausted` (possibly because you are judging from an earlier cached `state`, see below), **just back off for the current half-inning; don't disable it for the whole match** — it recovers automatically at side change;
+3. Don't reach for `ling` only once the quota is full: **when full (`count >= skills_per_half`) no item can be sent — `ling` included**. Its positive-EV window is **the last remaining slot of the half** (`count == skills_per_half - 1`): a success resets the quota, a failure drains it.
 
-> **About state snapshot lag**: after an operation (e.g. `sac`) succeeds, the returned `items.half_used.count` may still be the **old value** (the snapshot hasn't refreshed yet), so locally you "think it's not full yet" and pick `item` again, receiving one extra `skills_exhausted`. In this residual window, **the server's error is authoritative** — as soon as you see the error, just back off; don't keep tripping on the lagging snapshot.
+> **About "snapshot lag"**: `items` is the server-side ledger **as of that request** (bookkeeping happens before the response is assembled); but if your implementation caches an earlier `state` (or fires requests concurrently) you judge on the **old `count`**, make one futile `item` attempt, and receive one extra `skills_exhausted`. In this residual window **the server error is authoritative** — as soon as you see it, back off; don't keep tripping on a stale snapshot.
 
 Related fields: `items.half_used` / `items.rules.skills_per_half` / `items.stock` / `items.bat_armed`. See [AI_DUEL_API.md §4.5.1](./AI_DUEL_API.md).
 

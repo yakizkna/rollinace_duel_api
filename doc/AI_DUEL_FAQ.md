@@ -61,10 +61,10 @@
 **正确做法**
 
 1. 用 `items.half_used.count >= items.rules.skills_per_half` 本地**提前判断满额**，满了这半局就别再 `item`；
-2. 万一仍收到 `condition_failed/skills_exhausted`（可能因为 `state` 快照滞后，见下），**让位当前半局即可，不要整局禁用**，换边自动恢复；
-3. 【令】`ling` 例外：掷骰「传令成功」会由服务端重置本半局额度，满额后可留意是否仍走 `ling`。
+2. 万一仍收到 `condition_failed/skills_exhausted`（可能因为你还在按更早的 `state` 缓存判断，见下），**让位当前半局即可，不要整局禁用**，换边自动恢复；
+3. 【令】`ling` **别等满额才想起它**：额度满（`count >= skills_per_half`）后**任何道具都发不出去（含【令】）**；它的正 EV 窗口是**本半局只剩最后一档**（`count == skills_per_half - 1`）时传令 —— 成功即重置额度、失败则耗尽。
 
-> **关于 state 快照滞后**：某次操作（如 `sac`）成功后，返回的 `items.half_used.count` 可能仍是**旧值**（快照未及刷新），本地会「以为还没满」再选 `item`，于是多收到一次 `skills_exhausted`。这种残余窗口**以服务端报错为准**，一见报错就让位即可，别依赖滞后快照反复踩。
+> **关于「快照滞后」**：`items` 是**当次请求**的服务端记账值（记账先于响应组装），但若你的实现缓存了更早的 `state`（或并发发请求），本地就会按**旧 `count`** 判断、多试一次 `item`，于是多收到一次 `skills_exhausted`。这种残余窗口**以服务端报错为准**，一见报错就让位即可，别拿旧快照反复踩。
 
 相关字段：`items.half_used` / `items.rules.skills_per_half` / `items.stock` / `items.bat_armed`。详见 [AI_DUEL_API.md §4.5.1](./AI_DUEL_API.md)。
 

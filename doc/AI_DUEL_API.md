@@ -841,8 +841,8 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 > **⚠️ 道具配额最佳实践（接入方必读）**
 > - **`skills_exhausted` 是「正常满额」，不是异常**：每半局技能额度 `skills_per_half=3`（**被动【棒】也计次**），用完后再 `op:"item"` → `condition_failed` + `reason_detail:"skills_exhausted"`。**换边时服务端自动重置**，下一半局即可再用。
 > - **不要当熔断来整局封禁**：有的接入方遇到连续 `skills_exhausted` 就把 `item` 永久 `banned`，导致**之后整局再不用道具**（含换边后）。正确做法：读到 `condition_failed` / `reason="skills_exhausted"` 时让位**当前半局**即可，**半局一换额度就恢复**，不必整局禁用。可本地用 `items.half_used.count >= items.rules.skills_per_half` 提前判断满额、避免空试。
-> - **`state` 快照可能滞后**：某操作（如 `sac`）成功后，响应里 `items.half_used.count` 可能仍是**旧值**（快照未及刷新），此时本地判断会「以为还没满」再选 `item` → 又会收到一次 `skills_exhausted`。这种残余窗口以**服务端报错为准**：一见 `skills_exhausted` 立即让位即可，无需依赖滞后快照。
-> - **【令】`ling` 例外**：掷骰「传令成功」会由服务端**重置**本半局额度，因此满额后仍可尝试 `ling`（若白名单允许）。
+> - **别用「上一步的旧快照」判满额**：`act` / `state` 响应里的 `items` 都是**当次请求时**的服务端记账值（实现上记账先于响应组装），但若你的实现缓存了更早的 `state`（或并发发请求），就会按**旧 `count`** 判断而多试一次 `item` → 白得一次 `skills_exhausted`。这种残余窗口**以服务端报错为准**：一见 `skills_exhausted` 立即让位本半局即可；要做本地预判，请用**最近一次**响应里的 `items.half_used.count`。
+> - **【令】`ling` 的价值在「最后一档」，不在「满额后」**：额度用满（`count >= skills_per_half`）时**任何道具都发不出去**（含 `ling` —— 前置校验对道具一视同仁，`ling` 没有豁免），硬试只会白得一次 `skills_exhausted`。正 EV 窗口是**本半局还剩最后一次额度**（`count == skills_per_half - 1`）时传令：成功即重置额度（`count` 归 0、`used` 清空 ⇒ 白拿 3 次），失败则额度耗尽 —— 这是唯一有正期望的时机。
 
 ### 4.6 heartbeat / leave
 
@@ -1510,6 +1510,7 @@ while (true) {
 
 | 时间 | 变更 | 影响 |
 |---|---|---|
+| 2026-09-25 | **本契约重写并「归口」** | 对外契约的**唯一权威版本只在本仓**（实现仓 `rollin-ace` 的同名文档已改为指向本页的指针）；新增「速用卡 / 阅读地图」与 §3.1（外部 AI 可用 action）/ §3.2（平台专用 action）、§6.1（`situation` 全表）/ §7.6（`reason_detail` 速查）、§十（本表）。**章节编号未变** ⇒ 既有 § 引用（如 §4.5.1 / §4.11 / §4.12 / 0.6）仍有效。同时纠正一处旧说法：额度满后**任何道具（含【令】）都发不出去**，`ling` 的正 EV 窗口是**只剩最后一档**（详见 §4.5.1） |
 | 2026-09-21 | **好坏球成为对战 / 大会房唯一模式** | `create` 的 `ai_use_bs` 字段下线（传了忽略，响应恒返回 `true`）；`act` 的 `set_bs` 下线（调用得 `illegal_op`）；每打席先选 `swing` / `read`；球种短码改版为 `s0`/`s1`/`s2`/`b1`/`b2`（旧 `strikeH`/`strike`/`ballH`/`ball` 作废） |
 | 2026-09-15 | 新增 **`guest`（游客）角色** + 单日配额 | 游客只能 `join`、不能 `create` / `cup_*`，不受单场限制，默认配额 1000 次/日 |
 | 2026-09-14 | 新增 **`platform_ai_opponent`** | 外部 AI 建房即可与平台 AI 对局，无需自己找对手；`bot_exclusive` 房对第三方关闭 |
