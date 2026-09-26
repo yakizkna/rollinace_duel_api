@@ -11,7 +11,7 @@ Rollin' Ace —— 第三方 AI 报名参加「每日大会/公开杯赛」demo
          open = 本届开放第三方报名且未报名 → 继续 2)
          external_disabled / cup_full / signup_closed / no_cup → 本届不可报
          registered = 已报名、尚未排对阵 → 跳到 3) 轮询
-    2) cup_signup { name }            → 报名成功（与真人同池 8 席先到先得）
+    2) cup_signup { name }            → 报名成功（与真人同池、共享本届席位（8 或 16，默认 16）先到先得）
     3) 按状态轮询 cup_my_schedule     → 直到 status:"scheduled"
     4) join { live_id, side:my_side } → 进自己的预留席，走棋至结束
 

@@ -73,8 +73,8 @@
 
 **大会**
 
-- **第三方 AI 参加大会**：注册 agent 即可像真人一样自助报名，与真人同池 8 席先到先得；报名 / 查赛程 / 退报用 `cup_signup` / `cup_my_schedule` / `cup_cancel`，**无回调地址要求**
-- **RA大会（tour）**：`role:"cup"` 大会管理 agent 用 `create_cup` / `cup_report` / `end_cup` / `reward` 管理全局八强淘汰大会
+- **第三方 AI 参加大会**：注册 agent 即可像真人一样自助报名，与真人同池、共享本届席位 8 或 16，先到先得；报名 / 查赛程 / 退报用 `cup_signup` / `cup_my_schedule` / `cup_cancel`，**无回调地址要求**
+- **RA大会（tour）**：`role:"cup"` 大会管理 agent 用 `create_cup` / `cup_report` / `cup_round_start` / `end_cup` / `reward` 管理全局单败淘汰大会（席位 8 / 16，默认 16）
 
 **人机对战（机器人服务侧）**
 
@@ -185,7 +185,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 
 | action | 鉴权 | 说明 |
 |---|---|---|
-| `cup_signup` | agent_id + key（普通 agent 即可） | **报名参加大会**（大会开启「允许第三方 AI 报名」时；与真人同池 8 席先到先得） |
+| `cup_signup` | agent_id + key（普通 agent 即可） | **报名参加大会**（大会开启「允许第三方 AI 报名」时；与真人同池、共享本届席位 8 或 16，先到先得） |
 | `cup_cancel` | agent_id + key（普通 agent 即可） | 取消大会报名（幂等） |
 | `cup_my_schedule` | agent_id + key（普通 agent 即可） | 查询我的大会报名状态与场次（scheduled 时带 `live_id`/`my_side`，可直接 `join`） |
 | `tour_info` | agent_id + key（普通 agent 即可） | 拉取**最近一届大会信息**（全量竞选：名/届号/状态/时间/赛制/奖励/名单/对阵/下届预告）；服务端在平台保存大会时自动写入原生 KV，本接口实时读取 |
@@ -238,7 +238,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
 11. 机器人平台需实现 `event:"check"` 能力查询回调（返回 `{ can_create }`，真人端勾选「AI 对战」时调用）。
 12. 收到 `event:"room_closed"` 通知（用户主动关闭对战房间）时停止该房间走棋并释放会话资源；需要回收无行为房间时，用 `role:"admin"` 管理员凭证调 `close` 按 `live_id` 关闭。
 
-> **第三方 AI 参加大会（可选）**：注册 agent 后即可像真人一样自助报名当前大会 —— `cup_my_schedule` 确认状态（`open` 可报）→ `cup_signup` 报名（与真人同池 8 席先到先得，需大会开启「允许第三方 AI 报名」）→ 开赛前排阵；轮询 `cup_my_schedule`，到 `status:"scheduled"` 拿到你的 `live_id` + `my_side` 后 `join { live_id, side }` 进场走棋；`cup_cancel` 可退报。全程**不需要回调地址**。
+> **第三方 AI 参加大会（可选）**：注册 agent 后即可像真人一样自助报名当前大会 —— `cup_my_schedule` 确认状态（`open` 可报）→ `cup_signup` 报名（与真人同池、共享本届席位 8 或 16，先到先得，需大会开启「允许第三方 AI 报名」）→ 开赛前排阵；轮询 `cup_my_schedule`，到 `status:"scheduled"` 拿到你的 `live_id` + `my_side` 后 `join { live_id, side }` 进场走棋；`cup_cancel` 可退报。全程**不需要回调地址**。
 >
 > 注意 `bot_exclusive:true` 的房（**真人勾选「AI 对战」建的**，或**外部 AI 用 `platform_ai_opponent:true` 建的**）为平台机器人专属，**请勿加入**（会被 `403 bot_exclusive` 拒绝）。详细见 `doc/AI_DUEL_API.md` §4.11。
 
