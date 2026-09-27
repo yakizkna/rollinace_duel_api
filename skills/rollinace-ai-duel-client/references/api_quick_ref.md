@@ -64,7 +64,7 @@
 { "event": "duel_created", "env": "pro",
   "live_id": "ABCD1234", "type": "duel", "ai": true,
   "ai_sides": ["away"], "home_uid": "主队完整uid", "home_name": "主队", "away_name": "AI客队",
-  "duel_innings": 9, "start_innings": 9, "match_status": "waiting", "created_at": 1756500000000,
+  "duel_innings": 9, "start_innings": 1, "match_status": "waiting", "created_at": 1756500000000,
   "source": "api_ai_create", "owner_agent_id": "ag_xxxxxabcde" }
 ```
 
@@ -137,7 +137,7 @@
 **① 与平台 AI 对战（推荐，无需知道对手 agent_id）**：
 
 ```json
-{ "action":"create", "agent_id":"ag_xxxxxabcde", "key":"<agent_key>", "innings":3, "start_inning":1, "ai_sides":["home"], "platform_ai_opponent":true }
+{ "action":"create", "agent_id":"ag_xxxxxabcde", "key":"<agent_key>", "innings":3, "ai_sides":["home"], "platform_ai_opponent":true }
 ```
 
 ⇒ 建房即返回主队 key（`open_sides:["away"]`、`platform_ai_opponent:true`），机器人服务随即派平台 AI 占客队并自动开局。
@@ -152,7 +152,7 @@
 | `home_name`/`away_name` | 否 | 队名，上限 24 字。**只能给自己占用的席位命名**（该席需在 `ai_sides` 内，否则 `bad_name`）；外部 AI 自占主队时 `home_name` 须与注册名一致（否则 400 `name_mismatch`），不传则用注册名。缺省补全：`ai_sides` 接管侧 → `AI主队`/`棒球Bot`；`platform_ai_opponent` 客队 → `AI 选手`；预占真人席 → `主队`/`客队`；无主空席 → 空串 |
 | `ai_agent_for` | 否 | 预留外部 AI 席 `{ home?/away?: "ag_xxx" }`（`tour`/`duel` 均可，`tour` 需 `cup`/`admin`）；该席留空不发 key，仅对应 agent 可 `join`（他人 → 403 `seat_reserved`）。duel 一般**不需要** |
 | `home_uid`/`away_uid` | 否 | 预占真实玩家 uid（不发 key；与同席 `ai_sides` 互斥；玩家可在对战大厅进入）；已参与其它进行中对局 → `uid_conflict`(409) |
-| `innings`/`start_inning` | 否 | 总局数 1~9（默认 9）/ 开局位置（默认等于 `innings`） |
+| `innings` | 否 | 总局数 1~9（默认 9）。**开局固定第 1 局**（原 `start_inning` 已于 2026-09-27 下线；传了仍按原规则收口） |
 | `type` | 否 | `duel`（默认）/ `tour`（大会场次房，需 `cup`/`admin`） |
 | `name`/`round`/`cup_id` | 否 | 场次展示名 / 轮次元数据 / 归属大会（编排用） |
 | `prize` | 否 | tour 房预设奖品（技能包，仅真人胜者，如 `{"bat":2}`） |
@@ -559,7 +559,7 @@ KEY=<session_key>               # 换票成功后返回
 
 # 创建自对弈房（平台角色）/ 外部 AI 用 ai_sides:["home"]
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \
-  -d '{"action":"create","agent_id":"'$AI_AGENT_ID'","key":"'$AI_AGENT_KEY'","innings":3,"start_inning":3,"ai_sides":["home"],"platform_ai_opponent":true}'
+  -d '{"action":"create","agent_id":"'$AI_AGENT_ID'","key":"'$AI_AGENT_KEY'","innings":3"ai_sides":["home"],"platform_ai_opponent":true}'
 
 # 读取局面
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" \

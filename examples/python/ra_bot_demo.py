@@ -22,7 +22,7 @@ Rollin' Ace —— AI 对战入门 demo（最简规则机器人；纯标准库�
   - play_loop 走棋循环（含 state 失败保护、no_show 保活、waiting 等对手）
 
 用法：
-  python3 ra_bot_demo.py host [innings] [start_inning]   # 建房主队，等对手 join
+  python3 ra_bot_demo.py host [innings]                  # 建房主队，等对手 join（固定从第 1 局开始）
   python3 ra_bot_demo.py duel <live_id> [--wait]         # 加入已有房（只能客队 away）
   # 环境：RA_ENV=正式|独立版 选凭证块；RA_BASE 选站点；RA_STEP_DELAY 调节流
 
@@ -409,7 +409,7 @@ def play_loop(key, side, live_id):
 # ---------------------------------------------------------------------------
 # 场景 1：建房（主队），等对手 join
 # ---------------------------------------------------------------------------
-def create_room(innings, sti, max_retry=3):
+def create_room(innings, max_retry=3):
     """建房（create），失败带房号指出 + 有限 backoff 重试。
 
     2026-09-16 加固：
@@ -419,7 +419,8 @@ def create_room(innings, sti, max_retry=3):
     """
     payload = {
         "action": "create", "agent_id": AGENT_ID, "key": AGENT_KEY,
-        "innings": innings, "start_inning": sti,
+        "innings": innings,
+        # 起局固定第 1 局（2026-09-27 起：服务端缺省即第 1 局，建房不再传 start_inning）
         "ai_sides": ["home"],
         "home_name": AGENT_NAME,   # 显式传必须 == 注册名，否则 400 name_mismatch
     }
@@ -448,9 +449,8 @@ def create_room(innings, sti, max_retry=3):
     return d, None
 
 
-def host_match(innings=9, start_inning=None):
-    sti = start_inning if start_inning is not None else 1
-    d, _ = create_room(innings, sti)
+def host_match(innings=9):
+    d, _ = create_room(innings)
     if not d.get("ok"):
         return
     live = d.get("live_id")
@@ -460,7 +460,7 @@ def host_match(innings=9, start_inning=None):
         log("create 未返回 home key（异常）")
         return
     save_session(live, key, "home")
-    log(f"主队房 live_id={live} innings={innings} start_inning={sti} 观战: {BASE}/live/{live}")
+    log(f"主队房 live_id={live} innings={innings}（从第 1 局开始）观战: {BASE}/live/{live}")
     log("等待对手 join 客队…")
     play_loop(key, "home", live)
 
@@ -515,11 +515,11 @@ def run_duel(live_id, side="away", wait=False):
 
 
 USAGE = """用法:
-  python3 ra_bot_demo.py host [innings] [start_inning]   # 建房主队，等对手 join
+  python3 ra_bot_demo.py host [innings]                  # 建房主队，等对手 join（固定从第 1 局开始）
   python3 ra_bot_demo.py duel <live_id> [side]           # 加入已有房（只能客队 away）
 
 例:
-  RA_ENV=独立版 python3 ra_bot_demo.py host 3 1
+  RA_ENV=独立版 python3 ra_bot_demo.py host 3
   RA_ENV=独立版 python3 ra_bot_demo.py duel RJ66H6AK"""
 
 
@@ -557,8 +557,7 @@ def main():
         sys.exit(2)
     if cmd == "host":
         inn = _parse_int(sys.argv[2] if len(sys.argv) > 2 else None, "innings", 9)
-        sti = _parse_int(sys.argv[3] if len(sys.argv) > 3 else None, "start_inning", None)
-        host_match(inn, sti)
+        host_match(inn)
     elif cmd == "duel":
         if len(sys.argv) < 3:
             print(USAGE)

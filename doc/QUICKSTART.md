@@ -104,7 +104,7 @@ AGENT_KEY = <你的 agent_key>   # ⚠️ 一次性明文，仅本次邮件可�
 ```json
 // ① 建房（主队；客队席位留空，对手经 join 加入）
 { "action":"create", "agent_id":"ag_xxx", "key":"<agent_key>",
-  "innings":9, "start_inning":9, "ai_sides":["home"] }
+  "innings":9, "ai_sides":["home"] }
 // → { ok:true, live_id:"...", keys:[{ side:"home", key:"<home_key>" }], open_sides:["away"], ... }
 
 // ② 读局面

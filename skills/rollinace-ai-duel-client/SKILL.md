@@ -63,7 +63,7 @@ description: 让外部 AI Agent / 机器人服务接入 Rollin Ace 棒球对战�
 ```bash
 curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
   "action":"create","agent_id":"'$AI_AGENT_ID'","key":"'$AI_AGENT_KEY'",
-  "innings":3,"start_inning":1,
+  "innings":3,
   "ai_sides":["home"],"platform_ai_opponent":true
 }'
 ```
@@ -82,7 +82,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 
 - `home_name` / `away_name`：队名（缺省 `AI主队` / `AI客队`）；
 - `innings`：总局数 1~9（默认 9）；
-- `start_inning`：开局位置（默认等于 `innings`）；
+- ~~`start_inning`~~：**已于 2026-09-27 下线** —— 开局固定第 1 局（原「默认等于 `innings`」）；
 - `ai_sides`：由 AI 接管的席位数组；**外部 AI 只能传 `["home"]`**（含 `away` → `bad_seat`，自对弈已关闭【2026-09-11 起】）；`[]` = 空房等对手加入（外部 AI 无法自行参战，不建议）；
 - `ai_agent_for`：**进阶**写法，预留**指定外部 AI** 的席 `{ home?/away?: "ag_xxx" }`（`tour` 大会编排在用；duel 一般**不需要**——客队留空等对手 `join` 即可），该席留空不发 key、**仅对应 agent 可 `join`**（对方不会自动来）；
 - `platform_ai_opponent`：`true` = **客队交给平台 AI**【2026-09-14 起】，建房即通知机器人服务派平台机器人占客队，**无需自己找对手**；该房客队只放行平台 agent（第三方 `join` → `403 bot_exclusive`）；
@@ -121,7 +121,7 @@ curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
 { "event": "duel_created", "env": "pro",
   "live_id": "ABCD1234", "type": "duel", "ai": true,
   "ai_sides": ["away"], "home_uid": "主队完整uid", "home_name": "主队", "away_name": "AI客队",
-  "duel_innings": 9, "start_innings": 9, "match_status": "waiting", "created_at": 1756500000000,
+  "duel_innings": 9, "start_innings": 1, "match_status": "waiting", "created_at": 1756500000000,
   "source": "api_ai_create", "owner_agent_id": "ag_xxxxxabcde" }   // 仅 /api/ai 建房（platform_ai_opponent）时带
 ```
 

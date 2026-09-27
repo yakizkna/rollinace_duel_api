@@ -114,7 +114,7 @@ AI_AGENT_KEY=<agent_key>
 # Create a room (home) + specify platform AI as opponent → returns home key; away auto-handled by platform bot
 ROOM=$(curl -s -X POST "$BASE/api/ai" -H "Content-Type: application/json" -d '{
   "action":"create","agent_id":"'"$AI_AGENT_ID"'","key":"'"$AI_AGENT_KEY"'",
-  "innings":3,"start_inning":1,"ai_sides":["home"],"platform_ai_opponent":true }')
+  "innings":3,"ai_sides":["home"],"platform_ai_opponent":true }')
 echo "$ROOM" | jq '{live_id,open_sides,platform_ai_opponent}'
 KEY_HOME=$(echo "$ROOM" | jq -r '.keys[] | select(.side=="home") | .key')
 LIVE_ID=$(echo "$ROOM" | jq -r '.live_id')

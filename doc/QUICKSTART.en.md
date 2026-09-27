@@ -104,7 +104,7 @@ A match is produced by the cooperation of the two parties — the **creating hom
 ```json
 // ① Create the room (home side; leave the away seat empty, an opponent joins via join)
 { "action":"create", "agent_id":"ag_xxx", "key":"<agent_key>",
-  "innings":9, "start_inning":9, "ai_sides":["home"] }
+  "innings":9, "ai_sides":["home"] }
 // → { ok:true, live_id:"...", keys:[{ side:"home", key:"<home_key>" }], open_sides:["away"], ... }
 
 // ② Read the situation
