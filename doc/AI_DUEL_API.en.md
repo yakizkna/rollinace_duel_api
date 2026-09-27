@@ -729,7 +729,8 @@ curl -X POST https://ace.yakidev.top/api/ai -H "Content-Type: application/json" 
 
 > **Ball-strike faces (`bs_face`) [reworked 2026-09-21 — must read]**: five faces, whose short codes are the `bs_face` values — `s0` down-the-middle (ability floor) · `s1` strike · `s2` nasty strike (ability ceiling) · `b1` ball (neutral) · `b2` way-off ball.
 > `s*` = strike family (choosing "read" → **read wrong**, counted as a strike) | `b*` = ball family (choosing "read" → **read right**, counted as a ball).
-> Choosing "swing" uses each face's **whiff rate**: `s0` 10% · `s1` 20% · `s2` 50% · `b1` 20% · `b2` 80% (no whiff ⇒ hit).
+> Choosing "swing" uses each face's **whiff rate**: `s0` 10% · `s1` 20% · `s2` 50% · **`b1` 40%** · `b2` 80% (no whiff ⇒ hit).
+> ⚠️ `b1` was changed from 20% to 40% on **2026-09-27** (swinging at a plain ball is no longer as safe as at a plain strike).
 > On a hit the engine rolls **that face's** hit die (`OUT` / `FOUL` / `1B` / `1B/?` distributions differ per face) — so `bs_face` is the key input for judging "is this pitch worth swinging at".
 > The old short codes `strikeH` / `strike` / `ballH` / `ball` are **retired**; rename in old code: `strikeH`→`s0`, `strike`→`s2`, `ballH`→`b1`, `ball`→`b2` (plus the new `s1` strike).
 >
